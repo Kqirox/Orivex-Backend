@@ -1,39 +1,109 @@
 import { Request, Response, NextFunction } from 'express';
-import * as jwt from 'jsonwebtoken';
+import jwt from 'jsonwebtoken';
 
-interface AuthRequest extends Request {
-  user?: {
-    id: string;
-    email: string;
-  };
+export type UserRole = 'learner' | 'employer';
+
+export interface JwtPayload {
+     id: string;
+     email: string;
+     role: UserRole;
+     iat?: number;
+     exp?: number;
 }
 
-export const authenticateToken = (req: AuthRequest, res: Response, next: NextFunction): void => {
-  const authHeader = req.headers['authorization'];
-  const token = authHeader && authHeader.split(' ')[1];
+declare global {
+     namespace Express {
+          interface Request {
+               user?: JwtPayload;
+          }
+     }
+}
 
-  if (!token) {
-    res.status(401).json({ error: 'Access token required' });
-    return;
-  }
+const JWT_SECRET = process.env.JWT_SECRET as string;
 
-  const jwtSecret = process.env.JWT_SECRET;
-  if (!jwtSecret) {
-    res.status(500).json({ error: 'JWT secret not configured' });
-    return;
-  }
+if (!JWT_SECRET) {
+     throw new Error('JWT_SECRET environment variable is required');
+}
 
-  jwt.verify(token, jwtSecret, (err: any, decoded: any) => {
-    if (err) {
-      res.status(403).json({ error: 'Invalid or expired token' });
-      return;
-    }
+/**
+ * Strict authentication — rejects requests without a valid JWT.
+ */
+export const authenticate = (
+     req: Request,
+     res: Response,
+     next: NextFunction
+): void => {
+     const authHeader = req.headers.authorization;
 
-    req.user = {
-      id: decoded.id,
-      email: decoded.email,
-    };
+     if (!authHeader || !authHeader.startsWith('Bearer ')) {
+          res.status(401).json({ message: 'Authorization token required' });
+          return;
+     }
 
-    next();
-  });
+     const token = authHeader.split(' ')[1];
+
+     try {
+          const decoded = jwt.verify(token, JWT_SECRET) as JwtPayload;
+          req.user = decoded;
+          next();
+     } catch (err) {
+          if (err instanceof jwt.TokenExpiredError) {
+               res.status(401).json({ message: 'Token has expired' });
+               return;
+          }
+          if (err instanceof jwt.JsonWebTokenError) {
+               res.status(401).json({ message: 'Invalid token' });
+               return;
+          }
+          res.status(500).json({ message: 'Internal server error during authentication' });
+     }
+};
+
+/**
+ * Optional authentication — attaches user to req if token is present and valid,
+ * but does not block requests without a token.
+ */
+export const optionalAuthenticate = (
+     req: Request,
+     res: Response,
+     next: NextFunction
+): void => {
+     const authHeader = req.headers.authorization;
+
+     if (!authHeader || !authHeader.startsWith('Bearer ')) {
+          return next();
+     }
+
+     const token = authHeader.split(' ')[1];
+
+     try {
+          const decoded = jwt.verify(token, JWT_SECRET) as JwtPayload;
+          req.user = decoded;
+     } catch {
+
+     }
+
+     next();
+};
+
+/**
+ * Role-based authorization — must be used after `authenticate`.
+ * Restricts access to users with one of the specified roles.
+ */
+export const authorize = (...roles: UserRole[]) => {
+     return (req: Request, res: Response, next: NextFunction): void => {
+          if (!req.user) {
+               res.status(401).json({ message: 'Authentication required' });
+               return;
+          }
+
+          if (!roles.includes(req.user.role)) {
+               res.status(403).json({
+                    message: `Access denied. Requires one of the following roles: ${roles.join(', ')}`,
+               });
+               return;
+          }
+
+          next();
+     };
 };
