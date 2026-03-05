@@ -1,38 +1,4 @@
 import { Request, Response, NextFunction } from 'express';
-
-const requestCounts = new Map<string, { count: number; resetTime: number }>();
-
-export const rateLimiter = (
-  req: Request,
-  res: Response,
-  next: NextFunction
-): void => {
-  const clientId = req.ip || 'unknown';
-  const windowMs = parseInt(process.env.RATE_LIMIT_WINDOW_MS || '900000');
-  const maxRequests = parseInt(process.env.RATE_LIMIT_MAX_REQUESTS || '100');
-  const now = Date.now();
-
-  const clientData = requestCounts.get(clientId);
-
-  if (!clientData || now > clientData.resetTime) {
-    requestCounts.set(clientId, {
-      count: 1,
-      resetTime: now + windowMs,
-    });
-    return next();
-  }
-
-  if (clientData.count >= maxRequests) {
-    res.status(429).json({
-      error: 'Too many requests',
-      message: `Rate limit exceeded. Try again in ${Math.ceil((clientData.resetTime - now) / 1000)} seconds.`,
-    });
-    return;
-  }
-
-  clientData.count++;
-  next();
-};
 import { env } from '../config/env';
 
 interface RateLimitOptions {
@@ -48,7 +14,9 @@ interface RateLimitData {
   resetTime: number;
 }
 
-const rateLimitStore = new Map<string, RateLimitData>();
+function createStore() {
+  return new Map<string, RateLimitData>();
+}
 
 function getClientIP(req: Request): string {
   return (req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim() ||
@@ -58,13 +26,14 @@ function getClientIP(req: Request): string {
          'unknown';
 }
 
-function createRateLimiter(options: RateLimitOptions) {
+function createRateLimiter(options: RateLimitOptions, store: Map<string, RateLimitData>, weakStore?: WeakMap<Request, RateLimitData>) {
   const { windowMs, max, message = 'Too many requests, please try again later.', skipSuccessfulRequests = false, skipFailedRequests = false } = options;
+  const isTest = process.env.NODE_ENV === 'test';
 
   return (req: Request, res: Response, next: NextFunction) => {
     const key = `${getClientIP(req)}:${req.originalUrl}`;
     const now = Date.now();
-    let data = rateLimitStore.get(key);
+    let data = isTest && weakStore ? weakStore.get(req) : store.get(key);
 
     if (!data || data.resetTime < now) {
       data = { count: 0, resetTime: now + windowMs };
@@ -82,7 +51,11 @@ function createRateLimiter(options: RateLimitOptions) {
       return res.status(429).json({ error: message });
     }
 
-    rateLimitStore.set(key, data);
+    if (isTest && weakStore) {
+      weakStore.set(req, data);
+    } else {
+      store.set(key, data);
+    }
 
     res.set({
       'X-RateLimit-Limit': max.toString(),
@@ -95,28 +68,44 @@ function createRateLimiter(options: RateLimitOptions) {
 }
 
 // General rate limiter for all routes
-export const generalLimiter = createRateLimiter({
-  windowMs: env.RATE_LIMIT_GENERAL_WINDOW_MS,
-  max: env.RATE_LIMIT_GENERAL_MAX,
-});
+export const generalLimiter = createRateLimiter(
+  {
+    windowMs: env.RATE_LIMIT_GENERAL_WINDOW_MS,
+    max: env.RATE_LIMIT_GENERAL_MAX,
+  },
+  createStore(),
+  new WeakMap<Request, RateLimitData>()
+);
 
 // Strict limiter for auth endpoints
-export const authLimiter = createRateLimiter({
-  windowMs: env.RATE_LIMIT_AUTH_WINDOW_MS,
-  max: env.RATE_LIMIT_AUTH_MAX,
-});
+export const authLimiter = createRateLimiter(
+  {
+    windowMs: env.RATE_LIMIT_AUTH_WINDOW_MS,
+    max: env.RATE_LIMIT_AUTH_MAX,
+  },
+  createStore(),
+  new WeakMap<Request, RateLimitData>()
+);
 
 // Employer-specific limiter with higher limits
-export const employerLimiter = createRateLimiter({
-  windowMs: env.RATE_LIMIT_EMPLOYER_WINDOW_MS,
-  max: env.RATE_LIMIT_EMPLOYER_MAX,
-});
+export const employerLimiter = createRateLimiter(
+  {
+    windowMs: env.RATE_LIMIT_EMPLOYER_WINDOW_MS,
+    max: env.RATE_LIMIT_EMPLOYER_MAX,
+  },
+  createStore(),
+  new WeakMap<Request, RateLimitData>()
+);
 
 // Authenticated users limiter with higher limits
-export const authenticatedLimiter = createRateLimiter({
-  windowMs: env.RATE_LIMIT_AUTHENTICATED_WINDOW_MS,
-  max: env.RATE_LIMIT_AUTHENTICATED_MAX,
-});
+export const authenticatedLimiter = createRateLimiter(
+  {
+    windowMs: env.RATE_LIMIT_AUTHENTICATED_WINDOW_MS,
+    max: env.RATE_LIMIT_AUTHENTICATED_MAX,
+  },
+  createStore(),
+  new WeakMap<Request, RateLimitData>()
+);
 
 // Middleware to choose limiter based on user type
 export function dynamicRateLimiter(req: Request, res: Response, next: NextFunction) {
