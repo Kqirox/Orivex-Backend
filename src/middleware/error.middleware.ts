@@ -16,7 +16,6 @@ export const errorHandler = (
 ): void => {
   let error = err;
 
-  // Log the original error
   logger.error({
     message: err.message,
     stack: err.stack,
@@ -25,16 +24,15 @@ export const errorHandler = (
     timestamp: new Date().toISOString(),
   });
 
-  // If it's not an AppError, convert it to an InternalServerError
   if (!(error instanceof AppError)) {
-    const message = err instanceof Error ? err.message : 'An unexpected error occurred';
+    const message =
+      err instanceof Error ? err.message : 'An unexpected error occurred';
     error = new InternalServerError(message);
   }
 
   const statusCode = (error as AppError).statusCode || 500;
   const isDevelopment = env.NODE_ENV === 'development';
 
-  // Build error response
   const errorResponse: any = {
     success: false,
     error: {
@@ -43,17 +41,14 @@ export const errorHandler = (
     },
   };
 
-  // Add stack trace only in development
   if (isDevelopment && err.stack) {
     errorResponse.error.stack = err.stack.split('\n');
   }
 
-  // Include validation errors if present
-  if ('errors' in error && error.errors) {
-    errorResponse.error.details = error.errors;
+  if ('errors' in error && (error as any).errors) {
+    errorResponse.error.details = (error as any).errors;
   }
 
-  // Add request context in development
   if (isDevelopment) {
     errorResponse.error.request = {
       method: req.method,
@@ -67,16 +62,14 @@ export const errorHandler = (
 
 /**
  * 404 Not Found handler
- * Must be registered AFTER all other routes
+ * Must be registered AFTER all routes
  */
 export const notFoundHandler = (
   req: Request,
   res: Response,
   next: NextFunction
 ): void => {
-  const notFound = new NotFoundError(
-    `Cannot ${req.method} ${req.path}`
-  );
+  const notFound = new NotFoundError(`Cannot ${req.method} ${req.path}`);
 
   logger.warn({
     message: 'Not Found',
@@ -85,13 +78,12 @@ export const notFoundHandler = (
     timestamp: new Date().toISOString(),
   });
 
-  // Pass to error handler
   next(notFound);
 };
 
 /**
  * Async error wrapper for route handlers
- * Wraps async route handlers to catch unhandled promise rejections
+ * Prevents unhandled promise rejections
  */
 export const asyncHandler = (
   fn: (req: Request, res: Response, next: NextFunction) => Promise<any>
@@ -106,6 +98,7 @@ export const asyncHandler = (
         method: req.method,
         timestamp: new Date().toISOString(),
       });
+
       next(error);
     });
   };
