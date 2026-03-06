@@ -2,12 +2,11 @@
  * stellar.service.ts
  *
  * Service layer for all Stellar blockchain interactions.
- * Built for @stellar/stellar-sdk v12+ (the modern package — NOT the old "stellar-sdk").
  *
- * Install:
- *   npm install @stellar/stellar-sdk
+ * Compatible with @stellar/stellar-sdk v11.x
+ * where the Soroban RPC namespace is `rpc`, not `SorobanRpc`.
  *
- * Env vars expected:
+ * Env vars:
  *   STELLAR_NETWORK=testnet | mainnet   (default: testnet)
  *   SOROBAN_CONTRACT_ID=C...            (your deployed credential contract)
  */
@@ -15,7 +14,7 @@
 import {
   Keypair,
   Networks,
-  SorobanRpc,
+  rpc,
   TransactionBuilder,
   Asset,
   Operation,
@@ -26,10 +25,38 @@ import {
   scValToNative,
   Contract,
   Address,
+  Horizon,
 } from "@stellar/stellar-sdk";
 
 // ---------------------------------------------------------------------------
-// Types
+// Local type aliases — keeps the rest of the file readable
+// ---------------------------------------------------------------------------
+
+type RpcServer              = rpc.Server;
+type SimulateTransactionResponse = rpc.Api.SimulateTransactionResponse;
+type GetTransactionResponse = rpc.Api.GetTransactionResponse;
+
+// ---------------------------------------------------------------------------
+// Balance row shape returned from Horizon via rpc.Server.getAccount()
+// ---------------------------------------------------------------------------
+
+interface NativeBalance {
+  asset_type: "native";
+  balance: string;
+}
+
+interface IssuedBalance {
+  asset_type: "credit_alphanum4" | "credit_alphanum12";
+  asset_code: string;
+  asset_issuer: string;
+  balance: string;
+  limit: string;
+}
+
+type HorizonBalance = NativeBalance | IssuedBalance;
+
+// ---------------------------------------------------------------------------
+// Public types
 // ---------------------------------------------------------------------------
 
 export interface StellarWallet {
@@ -47,7 +74,7 @@ export interface PaymentOptions {
   sourceSecret: string;
   destinationPublicKey: string;
   amount: string;
-  asset?: Asset;          // defaults to XLM
+  asset?: Asset;
   memo?: string;
 }
 
@@ -61,7 +88,7 @@ export interface CredentialData {
   recipientPublicKey: string;
   credentialType: string;
   data: Record<string, unknown>;
-  expiresAt?: number; // Unix timestamp
+  expiresAt?: number;
 }
 
 export interface CredentialResult {
@@ -123,14 +150,14 @@ export class StellarServiceError extends Error {
 // ---------------------------------------------------------------------------
 
 export class StellarService {
-  private readonly server: SorobanRpc.Server;
+  private readonly server: rpc.Server;
+  private readonly horizonServer: Horizon.Server;
   private readonly networkPassphrase: string;
   private readonly contractId: string;
   private readonly network: NetworkName;
 
   constructor(
-    network: NetworkName = (process.env.STELLAR_NETWORK as NetworkName) ??
-      "testnet",
+    network: NetworkName = (process.env.STELLAR_NETWORK as NetworkName) ?? "testnet",
     contractId: string = process.env.SOROBAN_CONTRACT_ID ?? ""
   ) {
     this.network = network;
@@ -138,19 +165,16 @@ export class StellarService {
     this.networkPassphrase = config.networkPassphrase;
     this.contractId = contractId;
 
-    this.server = new SorobanRpc.Server(config.rpcUrl, {
+    this.server = new rpc.Server(config.rpcUrl, {
+      allowHttp: network === "testnet",
+    });
+    this.horizonServer = new Horizon.Server(config.horizonUrl, {
       allowHttp: network === "testnet",
     });
   }
 
-  // -------------------------------------------------------------------------
-  // Wallet generation
-  // -------------------------------------------------------------------------
+  // ── Wallet generation ─────────────────────────────────────────────────────
 
-  /**
-   * Generates a brand-new Stellar keypair.
-   * On testnet you can fund it immediately with friendbot.
-   */
   generateWallet(): StellarWallet {
     try {
       const keypair = Keypair.random();
@@ -167,9 +191,7 @@ export class StellarService {
     }
   }
 
-  /**
-   * Fund a testnet account via Friendbot (testnet only).
-   */
+  /** Fund a testnet account via Friendbot (testnet only). */
   async fundTestnetAccount(publicKey: string): Promise<void> {
     if (this.network !== "testnet") {
       throw new StellarServiceError(
@@ -179,12 +201,13 @@ export class StellarService {
     }
     try {
       const res = await fetch(
-        `https://friendbot.stellar.org?addr=${encodeURIComponent(publicKey)}` 
+        `https://friendbot.stellar.org?addr=${encodeURIComponent(publicKey)}`
       );
       if (!res.ok) {
         throw new Error(`Friendbot returned ${res.status}`);
       }
     } catch (err) {
+      if (err instanceof StellarServiceError) throw err;
       throw new StellarServiceError(
         "Failed to fund testnet account via Friendbot",
         "FRIENDBOT_ERROR",
@@ -193,16 +216,11 @@ export class StellarService {
     }
   }
 
-  // -------------------------------------------------------------------------
-  // Balance
-  // -------------------------------------------------------------------------
+  // ── Balances ──────────────────────────────────────────────────────────────
 
-  /**
-   * Returns all balances (XLM + any trustlines) for an account.
-   */
   async getBalances(publicKey: string): Promise<AccountBalance[]> {
     try {
-      const account = await this.server.getAccount(publicKey);
+      const account = await this.horizonServer.loadAccount(publicKey);
       return account.balances.map((b) => {
         const assetName =
           b.asset_type === "native"
@@ -228,24 +246,19 @@ export class StellarService {
     }
   }
 
-  /**
-   * Returns the native XLM balance as a plain string.
-   */
   async getNativeBalance(publicKey: string): Promise<string> {
     const balances = await this.getBalances(publicKey);
-    const native = balances.find((b) => b.asset === "XLM");
-    return native?.balance ?? "0";
+    return balances.find((b) => b.asset === "XLM")?.balance ?? "0";
   }
 
-  // -------------------------------------------------------------------------
-  // Payments
-  // -------------------------------------------------------------------------
+  // ── Payments ──────────────────────────────────────────────────────────────
 
-  /**
-   * Send a payment on Stellar.
-   * Handles both native XLM and any custom asset.
-   */
+  /** Alias kept for test compatibility. */
   async sendPaymentWithOptions(options: PaymentOptions): Promise<PaymentResult> {
+    return this.sendPayment(options);
+  }
+
+  async sendPayment(options: PaymentOptions): Promise<PaymentResult> {
     const { sourceSecret, destinationPublicKey, amount, memo } = options;
     const asset = options.asset ?? Asset.native();
 
@@ -254,12 +267,12 @@ export class StellarService {
       const sourcePublicKey = sourceKeypair.publicKey();
 
       // Load source account (needed for sequence number)
-      const sourceAccount = await this.server.getAccount(sourcePublicKey);
+      const sourceAccount = await this.horizonServer.loadAccount(sourcePublicKey);
 
       // Make sure destination exists (create it if sending XLM and it doesn't exist)
       let destinationExists = true;
       try {
-        await this.server.getAccount(destinationPublicKey);
+        await this.horizonServer.loadAccount(destinationPublicKey);
       } catch {
         destinationExists = false;
       }
@@ -270,7 +283,6 @@ export class StellarService {
       });
 
       if (!destinationExists && asset === Asset.native()) {
-        // createAccount instead of payment when account doesn't exist
         builder.addOperation(
           Operation.createAccount({
             destination: destinationPublicKey,
@@ -287,28 +299,44 @@ export class StellarService {
         );
       }
 
-      if (memo) {
-        builder.addMemo(Memo.text(memo));
-      }
+      if (memo) builder.addMemo(Memo.text(memo));
 
       const transaction = builder.setTimeout(30).build();
       transaction.sign(sourceKeypair);
 
-      const response = await this.server.sendTransaction(transaction);
+      const response = await this.horizonServer.submitTransaction(transaction);
 
-      if (response.status === "ERROR") {
+      if (!response.successful) {
         throw new Error(
-          `Transaction failed: ${JSON.stringify(response.errorResult)}` 
+          `Transaction failed: ${JSON.stringify(response)}`
         );
       }
 
       // Poll for confirmation
       const confirmed = await this.waitForTransaction(response.hash);
 
+      // For regular payments, Horizon response includes ledger
+      // For Soroban transactions, we'll need to poll the RPC server
+      let ledger = 0;
+      if ('ledger' in response && response.ledger) {
+        ledger = response.ledger;
+      } else {
+        // Try to get from RPC server for Soroban transactions
+        try {
+          const rpcResult = await this.waitForTransaction(response.hash);
+          if ('ledger' in rpcResult && rpcResult.ledger) {
+            ledger = rpcResult.ledger;
+          }
+        } catch {
+          // Fallback to 0 if we can't get the ledger
+          ledger = 0;
+        }
+      }
+
       return {
         hash: response.hash,
-        ledger: confirmed.ledger,
-        successful: confirmed.status === "SUCCESS",
+        ledger: ledger,
+        successful: response.successful,
       };
     } catch (err) {
       if (err instanceof StellarServiceError) throw err;
@@ -320,14 +348,8 @@ export class StellarService {
     }
   }
 
-  // -------------------------------------------------------------------------
-  // Soroban credential issuance
-  // -------------------------------------------------------------------------
+  // ── Credential issuance ───────────────────────────────────────────────────
 
-  /**
-   * Issues a credential on a Soroban smart contract.
-   * The contract must expose an `issue_credential` function.
-   */
   async issueCredential(
     issuerSecret: string,
     credential: CredentialData
@@ -341,13 +363,12 @@ export class StellarService {
 
     try {
       const issuerKeypair = Keypair.fromSecret(issuerSecret);
-      const issuerAccount = await this.server.getAccount(
+      const issuerAccount = await this.horizonServer.loadAccount(
         issuerKeypair.publicKey()
       );
 
       const contract = new Contract(this.contractId);
 
-      // Build Soroban args — adjust to match your actual contract ABI
       const args = [
         nativeToScVal(credential.recipientPublicKey, { type: "address" }),
         nativeToScVal(credential.credentialType, { type: "string" }),
@@ -355,41 +376,32 @@ export class StellarService {
         nativeToScVal(credential.expiresAt ?? 0, { type: "u64" }),
       ];
 
-      const operation = contract.call("issue_credential", ...args);
-
       const transaction = new TransactionBuilder(issuerAccount, {
         fee: BASE_FEE,
         networkPassphrase: this.networkPassphrase,
       })
-        .addOperation(operation)
+        .addOperation(contract.call("issue_credential", ...args))
         .setTimeout(30)
         .build();
 
-      // Simulate first (required for Soroban)
-      const simResult = await this.server.simulateTransaction(transaction);
+      const simResult: SimulateTransactionResponse =
+        await this.server.simulateTransaction(transaction);
 
-      if (SorobanRpc.Api.isSimulationError(simResult)) {
+      if (rpc.Api.isSimulationError(simResult)) {
         throw new Error(`Simulation failed: ${simResult.error}`);
       }
 
-      // Assemble the transaction with the simulation footprint
-      const assembledTx = SorobanRpc.assembleTransaction(
-        transaction,
-        simResult
-      ).build();
-
+      // assembleTransaction lives on the `rpc` namespace in v11
+      const assembledTx = rpc.assembleTransaction(transaction, simResult).build();
       assembledTx.sign(issuerKeypair);
 
       const sendResult = await this.server.sendTransaction(assembledTx);
-      const confirmed = await this.waitForTransaction(sendResult.hash);
-
-      // Extract return value (credentialId) from the result
-      const credentialId = this.extractReturnValue(confirmed);
+      const confirmed  = await this.waitForTransaction(sendResult.hash);
 
       return {
         contractId: this.contractId,
         transactionHash: sendResult.hash,
-        credentialId,
+        credentialId: this.extractReturnValue(confirmed),
       };
     } catch (err) {
       if (err instanceof StellarServiceError) throw err;
@@ -401,13 +413,8 @@ export class StellarService {
     }
   }
 
-  // -------------------------------------------------------------------------
-  // Soroban credential verification
-  // -------------------------------------------------------------------------
+  // ── Credential verification ───────────────────────────────────────────────
 
-  /**
-   * Verifies a credential by calling the contract's `verify_credential` view function.
-   */
   async verifyCredential(credentialId: string): Promise<VerificationResult> {
     if (!this.contractId) {
       throw new StellarServiceError(
@@ -417,12 +424,14 @@ export class StellarService {
     }
 
     try {
-      const contract = new Contract(this.contractId);
-      const args = [nativeToScVal(credentialId, { type: "string" })];
-      const operation = contract.call("verify_credential", ...args);
+      const contract  = new Contract(this.contractId);
+      const operation = contract.call(
+        "verify_credential",
+        nativeToScVal(credentialId, { type: "string" })
+      );
 
       // For read-only calls we simulate without signing
-      const dummyAccount = await this.server.getAccount(
+      const dummyAccount = await this.horizonServer.loadAccount(
         // Use a well-known testnet account for simulation if no source available
         "GAAZI4TCR3TY5OJHCTJC2A4QSY6CJWJH5IAJTGKIN2ER7LBNVKOCCWN"
       );
@@ -435,15 +444,15 @@ export class StellarService {
         .setTimeout(30)
         .build();
 
-      const simResult = await this.server.simulateTransaction(tx);
+      const simResult: SimulateTransactionResponse =
+        await this.server.simulateTransaction(tx);
 
-      if (SorobanRpc.Api.isSimulationError(simResult)) {
+      if (rpc.Api.isSimulationError(simResult)) {
         throw new Error(`Verification simulation failed: ${simResult.error}`);
       }
 
-      // Parse the return value
       const returnVal =
-        SorobanRpc.Api.isSimulationSuccess(simResult) && simResult.result
+        rpc.Api.isSimulationSuccess(simResult) && simResult.result
           ? scValToNative(simResult.result.retval)
           : null;
 
@@ -463,14 +472,12 @@ export class StellarService {
       return {
         isValid: true,
         credentialId,
-        issuer: String(parsed.issuer ?? ""),
-        recipient: String(parsed.recipient ?? ""),
-        credentialType: String(parsed.credential_type ?? ""),
-        issuedAt: Number(parsed.issued_at ?? 0),
-        expiresAt: parsed.expires_at ? Number(parsed.expires_at) : undefined,
-        data: parsed.data
-          ? JSON.parse(String(parsed.data))
-          : {},
+        issuer:          String(parsed.issuer ?? ""),
+        recipient:       String(parsed.recipient ?? ""),
+        credentialType:  String(parsed.credential_type ?? ""),
+        issuedAt:        Number(parsed.issued_at ?? 0),
+        expiresAt:       parsed.expires_at ? Number(parsed.expires_at) : undefined,
+        data:            parsed.data ? JSON.parse(String(parsed.data)) : {},
       };
     } catch (err) {
       if (err instanceof StellarServiceError) throw err;
@@ -482,20 +489,33 @@ export class StellarService {
     }
   }
 
-  // -------------------------------------------------------------------------
-  // Helpers
-  // -------------------------------------------------------------------------
+  // ── Transaction status check ──────────────────────────────────────────────
+
+  async verifyTransaction(hash: string): Promise<boolean> {
+    try {
+      const result = await this.server.getTransaction(hash);
+      return result.status === rpc.Api.GetTransactionStatus.SUCCESS;
+    } catch (err) {
+      throw new StellarServiceError(
+        `Failed to verify transaction ${hash}`,
+        "TRANSACTION_VERIFY_ERROR",
+        err
+      );
+    }
+  }
+
+  // ── Private helpers ───────────────────────────────────────────────────────
 
   private async waitForTransaction(
     hash: string,
     maxAttempts = 20,
     intervalMs = 2000
-  ): Promise<SorobanRpc.Api.GetTransactionResponse> {
+  ): Promise<rpc.Api.GetTransactionResponse> {
     for (let i = 0; i < maxAttempts; i++) {
       await new Promise((r) => setTimeout(r, intervalMs));
       const result = await this.server.getTransaction(hash);
 
-      if (result.status !== SorobanRpc.Api.GetTransactionStatus.NOT_FOUND) {
+      if (result.status !== rpc.Api.GetTransactionStatus.NOT_FOUND) {
         return result;
       }
     }
@@ -506,11 +526,11 @@ export class StellarService {
   }
 
   private extractReturnValue(
-    txResult: SorobanRpc.Api.GetTransactionResponse
+    txResult: rpc.Api.GetTransactionResponse
   ): string {
     try {
       if (
-        txResult.status === SorobanRpc.Api.GetTransactionStatus.SUCCESS &&
+        txResult.status === rpc.Api.GetTransactionStatus.SUCCESS &&
         txResult.returnValue
       ) {
         const native = scValToNative(txResult.returnValue);
@@ -521,56 +541,10 @@ export class StellarService {
     }
     return `cred_${Date.now()}`;
   }
-
-  // -------------------------------------------------------------------------
-  // Existing interface methods (for backward compatibility)
-  // -------------------------------------------------------------------------
-
-  /**
-   * Send an XLM payment to `destinationAddress`.
-   * Returns the transaction hash on success.
-   */
-  async sendPayment(
-    destinationAddress: string,
-    amount: number,
-    memo: string,
-  ): Promise<string> {
-    // This method is kept for backward compatibility
-    throw new Error(
-      `Legacy sendPayment not implemented. Use sendPaymentWithOptions() with PaymentOptions instead.`
-    );
-  }
-
-  /**
-   * Look up the wallet address stored for a given user.
-   * Returns undefined when the user has no wallet on record.
-   */
-  async getWalletAddress(userId: string): Promise<string | undefined> {
-    // Production: query the database for user.walletAddress
-    throw new Error(
-      `StellarService.getWalletAddress not implemented for user "${userId}"`,
-    );
-  }
-
-  /**
-   * Verify that a transaction hash exists and is confirmed on the network.
-   */
-  async verifyTransaction(txHash: string): Promise<boolean> {
-    try {
-      const result = await this.server.getTransaction(txHash);
-      return result.status === SorobanRpc.Api.GetTransactionStatus.SUCCESS;
-    } catch (err) {
-      throw new StellarServiceError(
-        `Failed to verify transaction ${txHash}`,
-        "TRANSACTION_VERIFICATION_ERROR",
-        err
-      );
-    }
-  }
 }
 
 // ---------------------------------------------------------------------------
-// Singleton export (use this in the rest of your app)
+// Singleton export
 // ---------------------------------------------------------------------------
 
 export const stellarService = new StellarService();
