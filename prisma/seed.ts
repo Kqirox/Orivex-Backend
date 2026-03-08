@@ -177,6 +177,7 @@ async function main() {
   console.log('✅ Created webhook endpoint')
 
   console.log('🎉 Database seed completed successfully!')
+  console.log('🎉 Database seed completed successfully!', webhook)
 }
 
 main()
