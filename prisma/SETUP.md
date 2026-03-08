@@ -43,7 +43,7 @@ This will:
 Populate the database with mock data for development:
 
 ```bash
-pnpm db:seed
+npm run seed
 ```
 
 This will create:
@@ -115,7 +115,10 @@ pnpm db:studio
 prisma generate
 
 # Seed database with mock data
-pnpm db:seed
+npm run seed
+
+# Reset and reseed all tables
+npm run seed:reset
 
 # Format schema.prisma
 prisma format
