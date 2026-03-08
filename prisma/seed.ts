@@ -146,8 +146,10 @@ const seedModuleFixtures: SeedModule[] = [
 
 function createPrng(seed: number) {
   let state = seed >>> 0
+
   return () => {
     state = (1664525 * state + 1013904223) >>> 0
+
     return state / 0xffffffff
   }
 }
@@ -155,10 +157,12 @@ function createPrng(seed: number) {
 function scoreFor(module: SeedModule, rand: () => number) {
   const base = 66 + rand() * 28
   const penalty = (DIFFICULTY_MULTIPLIER[module.difficulty] - 1) * 5
+
   return Number(Math.max(60, Math.min(99, base - penalty)).toFixed(2))
 }
 
 function xlmAmount(module: SeedModule, rand: () => number) {
+
   return Number((module.reward * (1 + rand() * 0.3)).toFixed(2))
 }
 
