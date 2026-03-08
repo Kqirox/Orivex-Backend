@@ -1,118 +1,111 @@
 import { Request, Response, NextFunction } from 'express'
-import { UpdateUserData, ChangePasswordData, UpdateWalletData } from '../types/user.types'
+import { z, ZodSchema, ZodError } from 'zod'
 
-export const validateProfileUpdate = (req: Request, res: Response, next: NextFunction): void => {
-  const data: UpdateUserData = req.body
-  const errors: string[] = []
+// ── Common validation schemas ────────────────────────────────────────────────
+// These can be reused across different routes and controllers
 
-  if (data.username !== undefined) {
-    if (typeof data.username !== 'string' || data.username.trim().length < 3) {
-      errors.push('Username must be at least 3 characters long')
-    }
-    if (data.username.trim().length > 30) {
-      errors.push('Username must be less than 30 characters')
-    }
-    if (!/^[a-zA-Z0-9_]+$/.test(data.username)) {
-      errors.push('Username can only contain letters, numbers, and underscores')
-    }
-  }
-
-  if (data.firstName !== undefined) {
-    if (typeof data.firstName !== 'string' || data.firstName.trim().length > 50) {
-      errors.push('First name must be less than 50 characters')
-    }
-  }
-
-  if (data.lastName !== undefined) {
-    if (typeof data.lastName !== 'string' || data.lastName.trim().length > 50) {
-      errors.push('Last name must be less than 50 characters')
-    }
-  }
-
-  if (data.bio !== undefined) {
-    if (typeof data.bio !== 'string' || data.bio.length > 500) {
-      errors.push('Bio must be less than 500 characters')
-    }
-  }
-
-  if (data.avatar !== undefined) {
-    if (typeof data.avatar !== 'string') {
-      errors.push('Avatar must be a valid URL string')
-    }
-    try {
-      new URL(data.avatar)
-    } catch {
-      errors.push('Avatar must be a valid URL')
-    }
-  }
-
-  if (errors.length > 0) {
-    res.status(400).json({ errors })
-    
-return
-  }
-
-  next()
+export const commonSchemas = {
+  email: z.string().email('Invalid email format'),
+  password: z.string()
+    .min(8, 'Password must be at least 8 characters long')
+    .regex(/(?=.*[a-z])/, 'Password must contain at least one lowercase letter')
+    .regex(/(?=.*[A-Z])/, 'Password must contain at least one uppercase letter')
+    .regex(/(?=.*\d)/, 'Password must contain at least one number')
+    .regex(/(?=.*[@$!%*?&])/, 'Password must contain at least one special character'),
+  id: z.string().uuid('Invalid ID format'),
+  username: z.string()
+    .min(3, 'Username must be at least 3 characters long')
+    .max(30, 'Username must be less than 30 characters')
+    .regex(/^[a-zA-Z0-9_]+$/, 'Username can only contain letters, numbers, and underscores'),
+  walletAddress: z.string()
+    .regex(/^[G][A-Z0-9]{55}$/, 'Invalid Stellar wallet address format'),
+  url: z.string().url('Invalid URL format'),
 }
 
-export const validatePasswordChange = (req: Request, res: Response, next: NextFunction): void => {
-  const { currentPassword, newPassword }: ChangePasswordData = req.body
-  const errors: string[] = []
+// ── Validation middleware ───────────────────────────────────────────────────
+// Example usage:
+// router.post('/login', validate({ body: z.object({ email: commonSchemas.email, password: commonSchemas.password }) }), controller.login)
+// router.get('/users/:id', validate({ params: z.object({ id: commonSchemas.id }) }), controller.getUser)
 
-  if (!currentPassword || typeof currentPassword !== 'string') {
-    errors.push('Current password is required')
-  }
-
-  if (!newPassword || typeof newPassword !== 'string') {
-    errors.push('New password is required')
-  } else {
-    if (newPassword.length < 8) {
-      errors.push('New password must be at least 8 characters long')
-    }
-    if (!/(?=.*[a-z])/.test(newPassword)) {
-      errors.push('New password must contain at least one lowercase letter')
-    }
-    if (!/(?=.*[A-Z])/.test(newPassword)) {
-      errors.push('New password must contain at least one uppercase letter')
-    }
-    if (!/(?=.*\d)/.test(newPassword)) {
-      errors.push('New password must contain at least one number')
-    }
-    if (!/(?=.*[@$!%*?&])/.test(newPassword)) {
-      errors.push('New password must contain at least one special character')
-    }
-  }
-
-  if (currentPassword === newPassword) {
-    errors.push('New password must be different from current password')
-  }
-
-  if (errors.length > 0) {
-    res.status(400).json({ errors })
-    
-return
-  }
-
-  next()
+export interface ValidationSchemas {
+  body?: ZodSchema
+  query?: ZodSchema
+  params?: ZodSchema
 }
 
-export const validateWalletAddress = (req: Request, res: Response, next: NextFunction): void => {
-  const { walletAddress }: UpdateWalletData = req.body
-  const errors: string[] = []
+export const validate = (schemas: ValidationSchemas) => {
+  return (req: Request, res: Response, next: NextFunction): void => {
+    const errors: Record<string, string[]> = {}
 
-  if (!walletAddress || typeof walletAddress !== 'string') {
-    errors.push('Wallet address is required')
-  } else {
-    if (!/^[G][A-Z0-9]{55}$/.test(walletAddress)) {
-      errors.push('Invalid Stellar wallet address format')
+    // Validate body
+    if (schemas.body) {
+      try {
+        req.body = schemas.body.parse(req.body)
+      } catch (error) {
+        if (error instanceof ZodError) {
+          errors.body = error.errors.map(err => err.message)
+        }
+      }
     }
-  }
 
-  if (errors.length > 0) {
-    res.status(400).json({ errors })
-    
-return
-  }
+    // Validate query
+    if (schemas.query) {
+      try {
+        req.query = schemas.query.parse(req.query)
+      } catch (error) {
+        if (error instanceof ZodError) {
+          errors.query = error.errors.map(err => err.message)
+        }
+      }
+    }
 
-  next()
+    // Validate params
+    if (schemas.params) {
+      try {
+        req.params = schemas.params.parse(req.params)
+      } catch (error) {
+        if (error instanceof ZodError) {
+          errors.params = error.errors.map(err => err.message)
+        }
+      }
+    }
+
+    // If there are errors, return 400 with field-specific errors
+    if (Object.keys(errors).length > 0) {
+      res.status(400).json({
+        message: 'Validation failed',
+        errors
+      })
+      return
+    }
+
+    next()
+  }
 }
+
+// Specific validation middlewares for backward compatibility
+export const validateProfileUpdate = validate({
+  body: z.object({
+    username: commonSchemas.username.optional(),
+    firstName: z.string().max(50, 'First name must be less than 50 characters').optional(),
+    lastName: z.string().max(50, 'Last name must be less than 50 characters').optional(),
+    bio: z.string().max(500, 'Bio must be less than 500 characters').optional(),
+    avatar: commonSchemas.url.optional(),
+  })
+})
+
+export const validatePasswordChange = validate({
+  body: z.object({
+    currentPassword: z.string().min(1, 'Current password is required'),
+    newPassword: commonSchemas.password,
+  }).refine(data => data.currentPassword !== data.newPassword, {
+    message: 'New password must be different from current password',
+    path: ['newPassword']
+  })
+})
+
+export const validateWalletAddress = validate({
+  body: z.object({
+    walletAddress: commonSchemas.walletAddress,
+  })
+})
