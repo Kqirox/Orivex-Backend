@@ -76,6 +76,7 @@ export const validate = (schemas: ValidationSchemas) => {
         message: 'Validation failed',
         errors
       })
+      
       return
     }
 
@@ -98,7 +99,7 @@ export const validatePasswordChange = validate({
   body: z.object({
     currentPassword: z.string().min(1, 'Current password is required'),
     newPassword: commonSchemas.password,
-  }).refine(data => data.currentPassword !== data.newPassword, {
+  }).refine((data: { currentPassword: string; newPassword: string }) => data.currentPassword !== data.newPassword, {
     message: 'New password must be different from current password',
     path: ['newPassword']
   })
