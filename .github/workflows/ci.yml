@@ -39,6 +39,8 @@ jobs:
 
       - name: Generate Prisma Client
         run: npx prisma generate
+        env:
+          DATABASE_URL: "file:./dev.db"
 
       - name: Lint (ESLint)
         run: pnpm run lint
