@@ -1,7 +1,6 @@
 import { Request, Response } from 'express'
 import { PrismaClient } from '@prisma/client'
 import { z } from 'zod'
-import { authenticate } from '../middleware/auth.middleware'
 
 const prisma = new PrismaClient()
 
@@ -14,16 +13,12 @@ const listModulesSchema = z.object({
   search: z.string().optional(),
 })
 
-const startModuleSchema = z.object({
-  moduleId: z.string().uuid(),
-})
 
 const completeModuleSchema = z.object({
   quizAnswers: z.array(z.object({
     questionId: z.string(),
     answer: z.string(),
   })),
-  timeSpent: z.number().optional(),
 })
 
 // GET /modules - List modules with filters and pagination
@@ -77,14 +72,14 @@ export const listModules = async (req: Request, res: Response) => {
     })
 
     // If user is authenticated, include their progress
-    let userProgress: any = {}
+    const userProgress: any = {}
     if (req.user) {
       const userCompletions = await prisma.completion.findMany({
         where: { userId: req.user.id },
         select: { moduleId: true, score: true, completedAt: true }
       })
       
-      userCompletions.forEach(completion => {
+      userCompletions.forEach((completion: any) => {
         userProgress[completion.moduleId] = {
           completed: true,
           score: completion.score,
@@ -94,7 +89,7 @@ export const listModules = async (req: Request, res: Response) => {
     }
 
     // Transform response
-    const transformedModules = modules.map(module => ({
+    const transformedModules = modules.map((module: any) => ({
       id: module.id,
       title: module.title,
       description: module.description,
@@ -260,7 +255,7 @@ export const completeModule = async (req: Request, res: Response) => {
       })
     }
 
-    const { quizAnswers, timeSpent } = bodyValidation.data
+    const { quizAnswers } = bodyValidation.data
 
     // Check if module exists
     const module = await prisma.module.findUnique({
