@@ -9,14 +9,18 @@ datasource db {
 model User {
   id              String         @id @default(uuid())
   email           String         @unique
-  name            String
+  username        String         @unique
+  password        String
+  role            Role           @default(LEARNER)
   walletAddress   String?        @unique
-  passwordHash    String
   createdAt       DateTime       @default(now())
   updatedAt       DateTime       @updatedAt
+  lastLoginAt     DateTime?
   completions     Completion[]
   credentials     Credential[]
   transactions    Transaction[]
+
+  @@map("users")
 }
 
 model Module {
@@ -70,6 +74,14 @@ model Transaction {
   createdAt       DateTime       @default(now())
   updatedAt       DateTime       @updatedAt
 }
+
+enum Role {
+  ADMIN
+  LEARNER
+  INSTRUCTOR
+}
+
+
 
 model WebhookEndpoint {
   id          String            @id @default(uuid())
