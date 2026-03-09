@@ -3,7 +3,7 @@ import { Request, Response } from 'express'
 import { AuthController } from '../src/controllers/auth.controller'
 import prisma from '../src/config/database'
 import bcrypt from 'bcryptjs'
-import jwt from 'jsonwebtoken'
+// import jwt from 'jsonwebtoken'
 
 // Mock dependencies
 vi.mock('../src/config/database', () => ({

@@ -2,7 +2,7 @@ import { Request, Response } from 'express'
 import bcrypt from 'bcryptjs'
 import jwt from 'jsonwebtoken'
 import prisma from '../config/database'
-import { RegisterInput, loginSchema, registerSchema } from '../schemas/auth.schema'
+import { loginSchema, registerSchema } from '../schemas/auth.schema'
 import { UserRole } from '../types/user.types'
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your-default-secret'
@@ -23,8 +23,8 @@ export class AuthController {
                     error: 'Validation failed',
                     details: validation.error.format()
                 })
-                
-return
+
+                return
             }
 
             const { email, password, username, role } = validation.data
@@ -41,8 +41,8 @@ return
 
             if (existingUser) {
                 res.status(409).json({ error: 'User with this email or username already exists' })
-                
-return
+
+                return
             }
 
             // Hash password
@@ -92,8 +92,8 @@ return
                     error: 'Validation failed',
                     details: validation.error.format()
                 })
-                
-return
+
+                return
             }
 
             const { email, password } = validation.data
@@ -105,16 +105,16 @@ return
 
             if (!user) {
                 res.status(401).json({ error: 'Invalid credentials' })
-                
-return
+
+                return
             }
 
             // Verify password
             const isMatch = await bcrypt.compare(password, user.password)
             if (!isMatch) {
                 res.status(401).json({ error: 'Invalid credentials' })
-                
-return
+
+                return
             }
 
             // Update last login
