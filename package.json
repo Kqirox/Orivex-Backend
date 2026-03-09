@@ -52,9 +52,14 @@
     "@types/jsonwebtoken": "^9.0.5",
     "@types/morgan": "^1.9.10",
     "@types/node": "^22.19.13",
+<<<<<<< Updated upstream
     "@types/swagger-jsdoc": "^6.0.4",
     "@types/swagger-ui-express": "^4.1.8",
     "@vitest/coverage-v8": "^4.0.18",
+=======
+    "@types/supertest": "^7.2.0",
+    "@vitest/coverage-v8": "4.0.18",
+>>>>>>> Stashed changes
     "eslint": "^10.0.2",
     "nodemon": "^3.1.14",
     "supertest": "^7.2.2",
