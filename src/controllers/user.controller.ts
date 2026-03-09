@@ -1,62 +1,54 @@
-import { ChangePasswordData, PublicUserInfo, UpdateUserData, UpdateWalletData, User } from '../types/user.types'
+import { ChangePasswordData, PublicUserInfo, UpdateUserData, User } from '../types/user.types'
 import { Request, Response } from 'express'
 
 export class UserController {
-  async getCurrentUser (req: Request, res: Response): Promise<void> {
-    try {
-      const userId = (req as any).user.id
+  /**
+   * @openapi
+   * /users/me:
+   *   get:
+   *     summary: Get current authenticated user profile
+   *     tags: [Users]
+   *     security:
+   *       - bearerAuth: []
+   *     responses:
+   *       200:
+   *         description: User profile retrieved successfully
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/User'
+   *       401:
+   *         description: Unauthorized
+   *       404:
+   *         description: User not found
+   */
 
-      const user = await this.findUserById(userId)
-      if (!user) {
-        res.status(404).json({ error: 'User not found' })
-
-        return
-      }
-
-      res.json({
-        id: user.id,
-        email: user.email,
-        username: user.username,
-        firstName: user.firstName,
-        lastName: user.lastName,
-        bio: user.bio,
-        avatar: user.avatar,
-        walletAddress: user.walletAddress,
-        isActive: user.isActive,
-        createdAt: user.createdAt,
-        updatedAt: user.updatedAt,
-      })
-    } catch (error) {
-      console.error('Error getting current user:', error)
-      res.status(500).json({ error: 'Internal server error' })
-    }
-  }
-
-  async updateProfile (req: Request, res: Response): Promise<void> {
-    try {
-      const userId = (req as any).user.id
-      const updateData: UpdateUserData = req.body
-
-      const updatedUser = await this.updateUserProfile(userId, updateData)
-
-      res.json({
-        id: updatedUser.id,
-        email: updatedUser.email,
-        username: updatedUser.username,
-        firstName: updatedUser.firstName,
-        lastName: updatedUser.lastName,
-        bio: updatedUser.bio,
-        avatar: updatedUser.avatar,
-        walletAddress: updatedUser.walletAddress,
-        isActive: updatedUser.isActive,
-        createdAt: updatedUser.createdAt,
-        updatedAt: updatedUser.updatedAt,
-      })
-    } catch (error) {
-      console.error('Error updating profile:', error)
-      res.status(500).json({ error: 'Internal server error' })
-    }
-  }
+  /**
+   * @openapi
+   * /users/profile:
+   *   put:
+   *     summary: Update user profile
+   *     tags: [Users]
+   *     security:
+   *       - bearerAuth: []
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             $ref: '#/components/schemas/UpdateUser'
+   *     responses:
+   *       200:
+   *         description: Profile updated successfully
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/User'
+   *       401:
+   *         description: Unauthorized
+   *       500:
+   *         description: Internal server error
+   */
 
   async getUserById (req: Request, res: Response): Promise<void> {
     try {
@@ -75,6 +67,7 @@ export class UserController {
         firstName: user.firstName,
         lastName: user.lastName,
         avatar: user.avatar,
+        role: user.role,
         createdAt: user.createdAt,
       }
 
@@ -113,37 +106,40 @@ export class UserController {
     }
   }
 
-  async updateWalletAddress (req: Request, res: Response): Promise<void> {
-    try {
-      const userId = (req as any).user.id
-      const { walletAddress }: UpdateWalletData = req.body
-
-      if (!this.isValidStellarAddress(walletAddress)) {
-        res.status(400).json({ error: 'Invalid Stellar wallet address' })
-
-        return
-      }
-
-      const updatedUser = await this.updateUserWallet(userId, walletAddress)
-
-      res.json({
-        id: updatedUser.id,
-        email: updatedUser.email,
-        username: updatedUser.username,
-        firstName: updatedUser.firstName,
-        lastName: updatedUser.lastName,
-        bio: updatedUser.bio,
-        avatar: updatedUser.avatar,
-        walletAddress: updatedUser.walletAddress,
-        isActive: updatedUser.isActive,
-        createdAt: updatedUser.createdAt,
-        updatedAt: updatedUser.updatedAt,
-      })
-    } catch (error) {
-      console.error('Error updating wallet address:', error)
-      res.status(500).json({ error: 'Internal server error' })
-    }
-  }
+  /**
+   * @openapi
+   * /users/wallet:
+   *   put:
+   *     summary: Update user Stellar wallet address
+   *     tags: [Users]
+   *     security:
+   *       - bearerAuth: []
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             required:
+   *               - walletAddress
+   *             properties:
+   *               walletAddress:
+   *                 type: string
+   *                 example: GABC123456789012345678901234567890123456789012345678901234567890
+   *     responses:
+   *       200:
+   *         description: Wallet address updated successfully
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/User'
+   *       400:
+   *         description: Invalid Stellar wallet address
+   *       401:
+   *         description: Unauthorized
+   *       500:
+   *         description: Internal server error
+   */
 
   private async findUserById (id: string): Promise<User | null> {
     const mockUser: User = {
@@ -156,6 +152,8 @@ export class UserController {
       avatar: 'https://example.com/avatar.jpg',
       walletAddress: 'GABC123456789012345678901234567890123456789012345678901234567890',
       isActive: true,
+      role: 'LEARNER' as any,
+      status: 'active' as any,
       createdAt: new Date(),
       updatedAt: new Date(),
     }
@@ -174,6 +172,8 @@ export class UserController {
       avatar: data.avatar,
       walletAddress: 'GABC123456789012345678901234567890123456789012345678901234567890',
       isActive: true,
+      role: 'LEARNER' as any,
+      status: 'active' as any,
       createdAt: new Date(),
       updatedAt: new Date(),
     }

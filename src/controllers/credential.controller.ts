@@ -5,9 +5,47 @@ import { prisma } from '../config/database'
 
 export class CredentialController {
   /**
-   * GET /credentials
-   * Retrieve all credentials for the authenticated user
-   * Query params: moduleId, fromDate, toDate, page, limit
+   * @openapi
+   * /credentials:
+   *   get:
+   *     summary: Retrieve user credentials
+   *     tags: [Credentials]
+   *     security:
+   *       - bearerAuth: []
+   *     parameters:
+   *       - in: query
+   *         name: moduleId
+   *         schema:
+   *           type: string
+   *       - in: query
+   *         name: fromDate
+   *         schema:
+   *           type: string
+   *           format: date
+   *       - in: query
+   *         name: toDate
+   *         schema:
+   *           type: string
+   *           format: date
+   *       - in: query
+   *         name: page
+   *         schema:
+   *           type: integer
+   *           default: 1
+   *       - in: query
+   *         name: limit
+   *         schema:
+   *           type: integer
+   *           default: 10
+   *     responses:
+   *       200:
+   *         description: Credentials retrieved successfully
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/CredentialList'
+   *       401:
+   *         description: Unauthorized
    */
   getUserCredentials = asyncHandler(
     async (req: Request, res: Response): Promise<void> => {
@@ -76,7 +114,7 @@ export class CredentialController {
 
       res.json({
         success: true,
-        data: credentials.map((cred) => ({
+        data: credentials.map((cred: any) => ({
           id: cred.id,
           userId: cred.userId,
           moduleId: cred.moduleId,
@@ -100,9 +138,30 @@ export class CredentialController {
   )
 
   /**
-   * GET /credentials/:id
-   * Retrieve a single credential by ID
-   * Requires authentication - user must own the credential
+   * @openapi
+   * /credentials/{id}:
+   *   get:
+   *     summary: Get credential by ID
+   *     tags: [Credentials]
+   *     security:
+   *       - bearerAuth: []
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema:
+   *           type: string
+   *     responses:
+   *       200:
+   *         description: Credential details retrieved successfully
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/Credential'
+   *       401:
+   *         description: Unauthorized
+   *       404:
+   *         description: Credential not found
    */
   getCredentialById = asyncHandler(
     async (req: Request, res: Response): Promise<void> => {
@@ -169,9 +228,26 @@ export class CredentialController {
   )
 
   /**
-   * GET /credentials/verify/:onChainId
-   * Public endpoint to verify a credential
-   * No authentication required
+   * @openapi
+   * /credentials/verify/{onChainId}:
+   *   get:
+   *     summary: Verify a credential
+   *     tags: [Credentials]
+   *     parameters:
+   *       - in: path
+   *         name: onChainId
+   *         required: true
+   *         schema:
+   *           type: string
+   *     responses:
+   *       200:
+   *         description: Credential verification status
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/VerificationResponse'
+   *       404:
+   *         description: Credential not found
    */
   verifyCredential = asyncHandler(
     async (req: Request, res: Response): Promise<void> => {

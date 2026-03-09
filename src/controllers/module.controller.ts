@@ -19,7 +19,45 @@ const completeModuleSchema = z.object({
   })),
 })
 
-// GET /modules - List modules with filters and pagination
+/**
+ * @openapi
+ * /modules:
+ *   get:
+ *     summary: List modules with filters and pagination
+ *     tags: [Modules]
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           default: 1
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 10
+ *       - in: query
+ *         name: category
+ *         schema:
+ *           type: string
+ *       - in: query
+ *         name: difficulty
+ *         schema:
+ *           type: string
+ *       - in: query
+ *         name: search
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: List of modules retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ModuleList'
+ *       400:
+ *         description: Invalid query parameters
+ */
 export const listModules = async (req: Request, res: Response) => {
   try {
     const queryValidation = listModulesSchema.safeParse(req.query)
@@ -118,7 +156,28 @@ export const listModules = async (req: Request, res: Response) => {
   }
 }
 
-// GET /modules/:id - Get module details
+/**
+ * @openapi
+ * /modules/{id}:
+ *   get:
+ *     summary: Get module details
+ *     tags: [Modules]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Module details retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Module'
+ *       404:
+ *         description: Module not found
+ */
 export const getModuleById = async (req: Request, res: Response) => {
   try {
     const { id } = req.params
@@ -180,7 +239,30 @@ export const getModuleById = async (req: Request, res: Response) => {
   }
 }
 
-// POST /modules/:id/start - Start tracking progress
+/**
+ * @openapi
+ * /modules/{id}/start:
+ *   post:
+ *     summary: Start a module
+ *     tags: [Modules]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       201:
+ *         description: Module started successfully
+ *       400:
+ *         description: Module already started or completed
+ *       401:
+ *         description: Unauthorized
+ *       404:
+ *         description: Module not found
+ */
 export const startModule = async (req: Request, res: Response) => {
   try {
     if (!req.user) {
@@ -236,7 +318,40 @@ export const startModule = async (req: Request, res: Response) => {
   }
 }
 
-// POST /modules/:id/complete - Complete module with quiz answers
+/**
+ * @openapi
+ * /modules/{id}/complete:
+ *   post:
+ *     summary: Complete a module with quiz answers
+ *     tags: [Modules]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/CompleteModuleInput'
+ *     responses:
+ *       200:
+ *         description: Module completed successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ModuleCompletionResponse'
+ *       400:
+ *         description: Invalid request or module already completed
+ *       401:
+ *         description: Unauthorized
+ *       404:
+ *         description: Module not found
+ */
 export const completeModule = async (req: Request, res: Response) => {
   try {
     if (!req.user) {
@@ -331,4 +446,4 @@ export const completeModule = async (req: Request, res: Response) => {
     console.error('Error completing module:', error)
     res.status(500).json({ message: 'Internal server error' })
   }
-}
+}
