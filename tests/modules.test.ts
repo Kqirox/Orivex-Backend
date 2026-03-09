@@ -1,74 +1,77 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
+import { describe, it, expect, beforeEach, vi } from 'vitest'
 import request from 'supertest'
 import app from '../../src/app'
-import { PrismaClient } from '@prisma/client'
 
-const prisma = new PrismaClient()
+// Mock Prisma Client
+vi.mock('@prisma/client', () => ({
+  PrismaClient: vi.fn().mockImplementation(() => ({
+    module: {
+      findMany: vi.fn(),
+      findUnique: vi.fn(),
+      count: vi.fn(),
+      create: vi.fn(),
+    },
+    completion: {
+      findMany: vi.fn(),
+      findUnique: vi.fn(),
+      create: vi.fn(),
+      update: vi.fn(),
+      delete: vi.fn(),
+    },
+    transaction: {
+      create: vi.fn(),
+      findFirst: vi.fn(),
+    }
+  }))
+}))
+
+// Mock auth middleware
+vi.mock('../../src/middleware/auth.middleware', () => ({
+  authenticate: (req: any, res: any, next: any) => {
+    req.user = { id: 'test-user-id', email: 'test@example.com', role: 'learner' }
+    next()
+  },
+  optionalAuthenticate: (req: any, res: any, next: any) => {
+    if (req.headers.authorization === 'Bearer mock-jwt-token') {
+      req.user = { id: 'test-user-id', email: 'test@example.com', role: 'learner' }
+    }
+    next()
+  }
+}))
 
 describe('Module Management Endpoints', () => {
   let authToken: string
-  let testUser: any
-  let testModule: any
+  const testUserId = 'test-user-id'
+  const testModuleId = 'test-module-id'
 
-  beforeEach(async () => {
-    // Clean up test data
-    await prisma.completion.deleteMany()
-    await prisma.transaction.deleteMany()
-    await prisma.module.deleteMany()
-    await prisma.user.deleteMany({
-      where: { email: { contains: 'test' } }
-    })
-
-    // Create test user
-    testUser = await prisma.user.create({
-      data: {
-        email: 'test@example.com',
-        name: 'Test User',
-        passwordHash: 'hashedpassword'
-      }
-    })
-
-    // Create test module
-    testModule = await prisma.module.create({
-      data: {
-        title: 'Test Module',
-        description: 'A test module for testing',
-        category: 'blockchain',
-        difficulty: 'beginner',
-        reward: 10.0
-      }
-    })
-
-    // Get auth token (mock JWT for testing)
+  beforeEach(() => {
     authToken = 'Bearer mock-jwt-token'
-    
-    // Mock the authenticate middleware
-    vi.mock('../../src/middleware/auth.middleware', () => ({
-      authenticate: (req: any, res: any, next: any) => {
-        req.user = { id: testUser.id, email: testUser.email, role: 'learner' }
-        next()
-      },
-      optionalAuthenticate: (req: any, res: any, next: any) => {
-        if (req.headers.authorization === authToken) {
-          req.user = { id: testUser.id, email: testUser.email, role: 'learner' }
-        }
-        next()
-      }
-    }))
-  })
-
-  afterEach(async () => {
-    // Clean up test data
-    await prisma.completion.deleteMany()
-    await prisma.transaction.deleteMany()
-    await prisma.module.deleteMany()
-    await prisma.user.deleteMany({
-      where: { email: { contains: 'test' } }
-    })
+    vi.clearAllMocks()
   })
 
   describe('GET /api/v1/modules', () => {
     it('should return paginated list of modules', async () => {
+      const { PrismaClient } = await import('@prisma/client')
+      const mockPrisma = new PrismaClient() as any
+
+      const mockModules = [
+        {
+          id: testModuleId,
+          title: 'Test Module',
+          description: 'A test module',
+          category: 'blockchain',
+          difficulty: 'beginner',
+          reward: 10.0,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+          _count: { completions: 5 }
+        }
+      ]
+
+      mockPrisma.module.count.mockResolvedValue(1)
+      mockPrisma.module.findMany.mockResolvedValue(mockModules)
+      mockPrisma.completion.findMany.mockResolvedValue([])
+
       const response = await request(app)
         .get('/api/v1/modules')
         .expect(200)
@@ -76,59 +79,114 @@ describe('Module Management Endpoints', () => {
       expect(response.body).toHaveProperty('modules')
       expect(response.body).toHaveProperty('pagination')
       expect(response.body.modules).toBeInstanceOf(Array)
-      expect(response.body.modules.length).toBeGreaterThan(0)
+      expect(response.body.modules.length).toBe(1)
       expect(response.body.pagination).toHaveProperty('page')
       expect(response.body.pagination).toHaveProperty('limit')
       expect(response.body.pagination).toHaveProperty('total')
     })
 
     it('should filter modules by category', async () => {
+      const { PrismaClient } = await import('@prisma/client')
+      const mockPrisma = new PrismaClient() as any
+
+      mockPrisma.module.count.mockResolvedValue(1)
+      mockPrisma.module.findMany.mockResolvedValue([])
+      mockPrisma.completion.findMany.mockResolvedValue([])
+
       const response = await request(app)
         .get('/api/v1/modules?category=blockchain')
         .expect(200)
 
-      expect(response.body.modules.every((module: any) => 
-        module.category === 'blockchain'
-      )).toBe(true)
+      expect(mockPrisma.module.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            category: 'blockchain'
+          })
+        })
+      )
     })
 
     it('should filter modules by difficulty', async () => {
+      const { PrismaClient } = await import('@prisma/client')
+      const mockPrisma = new PrismaClient() as any
+
+      mockPrisma.module.count.mockResolvedValue(1)
+      mockPrisma.module.findMany.mockResolvedValue([])
+      mockPrisma.completion.findMany.mockResolvedValue([])
+
       const response = await request(app)
         .get('/api/v1/modules?difficulty=beginner')
         .expect(200)
 
-      expect(response.body.modules.every((module: any) => 
-        module.difficulty === 'beginner'
-      )).toBe(true)
+      expect(mockPrisma.module.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            difficulty: 'beginner'
+          })
+        })
+      )
     })
 
     it('should search modules by title and description', async () => {
+      const { PrismaClient } = await import('@prisma/client')
+      const mockPrisma = new PrismaClient() as any
+
+      mockPrisma.module.count.mockResolvedValue(1)
+      mockPrisma.module.findMany.mockResolvedValue([])
+      mockPrisma.completion.findMany.mockResolvedValue([])
+
       const response = await request(app)
         .get('/api/v1/modules?search=Test')
         .expect(200)
 
-      expect(response.body.modules.length).toBeGreaterThan(0)
-      expect(response.body.modules.some((module: any) => 
-        module.title.includes('Test') || module.description.includes('Test')
-      )).toBe(true)
+      expect(mockPrisma.module.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            OR: [
+              { title: { contains: 'Test', mode: 'insensitive' } },
+              { description: { contains: 'Test', mode: 'insensitive' } }
+            ]
+          })
+        })
+      )
     })
 
     it('should include user progress when authenticated', async () => {
-      // Create a completion record
-      await prisma.completion.create({
-        data: {
-          userId: testUser.id,
-          moduleId: testModule.id,
-          score: 85
+      const { PrismaClient } = await import('@prisma/client')
+      const mockPrisma = new PrismaClient() as any
+
+      const mockModules = [
+        {
+          id: testModuleId,
+          title: 'Test Module',
+          description: 'A test module',
+          category: 'blockchain',
+          difficulty: 'beginner',
+          reward: 10.0,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+          _count: { completions: 5 }
         }
-      })
+      ]
+
+      const mockCompletions = [
+        {
+          moduleId: testModuleId,
+          score: 85,
+          completedAt: new Date()
+        }
+      ]
+
+      mockPrisma.module.count.mockResolvedValue(1)
+      mockPrisma.module.findMany.mockResolvedValue(mockModules)
+      mockPrisma.completion.findMany.mockResolvedValue(mockCompletions)
 
       const response = await request(app)
         .get('/api/v1/modules')
         .set('Authorization', authToken)
         .expect(200)
 
-      const moduleWithProgress = response.body.modules.find((m: any) => m.id === testModule.id)
+      const moduleWithProgress = response.body.modules.find((m: any) => m.id === testModuleId)
       expect(moduleWithProgress.userProgress).toBeTruthy()
       expect(moduleWithProgress.userProgress.completed).toBe(true)
       expect(moduleWithProgress.userProgress.score).toBe(85)
@@ -147,38 +205,74 @@ describe('Module Management Endpoints', () => {
 
   describe('GET /api/v1/modules/:id', () => {
     it('should return module details', async () => {
+      const { PrismaClient } = await import('@prisma/client')
+      const mockPrisma = new PrismaClient() as any
+
+      const mockModule = {
+        id: testModuleId,
+        title: 'Test Module',
+        description: 'A test module',
+        category: 'blockchain',
+        difficulty: 'beginner',
+        reward: 10.0,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        _count: { completions: 5 }
+      }
+
+      mockPrisma.module.findUnique.mockResolvedValue(mockModule)
+      mockPrisma.completion.findUnique.mockResolvedValue(null)
+
       const response = await request(app)
-        .get(`/api/v1/modules/${testModule.id}`)
+        .get(`/api/v1/modules/${testModuleId}`)
         .expect(200)
 
-      expect(response.body.id).toBe(testModule.id)
-      expect(response.body.title).toBe(testModule.title)
-      expect(response.body.description).toBe(testModule.description)
-      expect(response.body.category).toBe(testModule.category)
-      expect(response.body.difficulty).toBe(testModule.difficulty)
-      expect(response.body.reward).toBe(testModule.reward)
+      expect(response.body.id).toBe(testModuleId)
+      expect(response.body.title).toBe(mockModule.title)
+      expect(response.body.description).toBe(mockModule.description)
+      expect(response.body.category).toBe(mockModule.category)
+      expect(response.body.difficulty).toBe(mockModule.difficulty)
+      expect(response.body.reward).toBe(mockModule.reward)
       expect(response.body).toHaveProperty('completionCount')
     })
 
     it('should return 404 for non-existent module', async () => {
-      const fakeId = '550e8400-e29b-41d4-a716-446655440000'
+      const { PrismaClient } = await import('@prisma/client')
+      const mockPrisma = new PrismaClient() as any
+
+      mockPrisma.module.findUnique.mockResolvedValue(null)
+
       await request(app)
-        .get(`/api/v1/modules/${fakeId}`)
+        .get(`/api/v1/modules/non-existent-id`)
         .expect(404)
     })
 
     it('should include user progress when authenticated', async () => {
-      // Create a completion record
-      await prisma.completion.create({
-        data: {
-          userId: testUser.id,
-          moduleId: testModule.id,
-          score: 90
-        }
-      })
+      const { PrismaClient } = await import('@prisma/client')
+      const mockPrisma = new PrismaClient() as any
+
+      const mockModule = {
+        id: testModuleId,
+        title: 'Test Module',
+        description: 'A test module',
+        category: 'blockchain',
+        difficulty: 'beginner',
+        reward: 10.0,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        _count: { completions: 5 }
+      }
+
+      const mockCompletion = {
+        score: 90,
+        completedAt: new Date()
+      }
+
+      mockPrisma.module.findUnique.mockResolvedValue(mockModule)
+      mockPrisma.completion.findUnique.mockResolvedValue(mockCompletion)
 
       const response = await request(app)
-        .get(`/api/v1/modules/${testModule.id}`)
+        .get(`/api/v1/modules/${testModuleId}`)
         .set('Authorization', authToken)
         .expect(200)
 
@@ -190,52 +284,87 @@ describe('Module Management Endpoints', () => {
 
   describe('POST /api/v1/modules/:id/start', () => {
     it('should start tracking module progress', async () => {
+      const { PrismaClient } = await import('@prisma/client')
+      const mockPrisma = new PrismaClient() as any
+
+      const mockModule = {
+        id: testModuleId,
+        title: 'Test Module',
+        description: 'A test module',
+        category: 'blockchain',
+        difficulty: 'beginner',
+        reward: 10.0
+      }
+
+      const mockCompletion = {
+        id: 'completion-id',
+        userId: testUserId,
+        moduleId: testModuleId,
+        score: null,
+        createdAt: new Date()
+      }
+
+      mockPrisma.module.findUnique.mockResolvedValue(mockModule)
+      mockPrisma.completion.findUnique.mockResolvedValue(null)
+      mockPrisma.completion.create.mockResolvedValue(mockCompletion)
+
       const response = await request(app)
-        .post(`/api/v1/modules/${testModule.id}/start`)
+        .post(`/api/v1/modules/${testModuleId}/start`)
         .set('Authorization', authToken)
         .expect(201)
 
       expect(response.body.message).toBe('Module started successfully')
       expect(response.body).toHaveProperty('completionId')
       expect(response.body).toHaveProperty('startedAt')
-
-      // Verify completion record was created
-      const completion = await prisma.completion.findUnique({
-        where: {
-          userId_moduleId: {
-            userId: testUser.id,
-            moduleId: testModule.id
-          }
+      expect(mockPrisma.completion.create).toHaveBeenCalledWith({
+        data: {
+          userId: testUserId,
+          moduleId: testModuleId,
+          score: null
         }
       })
-      expect(completion).toBeTruthy()
-      expect(completion?.score).toBeNull() // null indicates in progress
     })
 
     it('should return 401 for unauthenticated request', async () => {
       await request(app)
-        .post(`/api/v1/modules/${testModule.id}/start`)
+        .post(`/api/v1/modules/${testModuleId}/start`)
         .expect(401)
     })
 
     it('should return 404 for non-existent module', async () => {
-      const fakeId = '550e8400-e29b-41d4-a716-446655440000'
+      const { PrismaClient } = await import('@prisma/client')
+      const mockPrisma = new PrismaClient() as any
+
+      mockPrisma.module.findUnique.mockResolvedValue(null)
+
       await request(app)
-        .post(`/api/v1/modules/${fakeId}/start`)
+        .post(`/api/v1/modules/${testModuleId}/start`)
         .set('Authorization', authToken)
         .expect(404)
     })
 
     it('should return 400 if module already started', async () => {
-      // Start the module first
-      await request(app)
-        .post(`/api/v1/modules/${testModule.id}/start`)
-        .set('Authorization', authToken)
-        .expect(201)
+      const { PrismaClient } = await import('@prisma/client')
+      const mockPrisma = new PrismaClient() as any
 
-      // Try to start again
+      const mockModule = {
+        id: testModuleId,
+        title: 'Test Module',
+        description: 'A test module',
+        category: 'blockchain',
+        difficulty: 'beginner',
+        reward: 10.0
+      }
+
+      const existingCompletion = {
+        score: null, // in progress
+      }
+
+      mockPrisma.module.findUnique.mockResolvedValue(mockModule)
+      mockPrisma.completion.findUnique.mockResolvedValue(existingCompletion)
+
       const response = await request(app)
-        .post(`/api/v1/modules/${testModule.id}/start`)
+        .post(`/api/v1/modules/${testModuleId}/start`)
         .set('Authorization', authToken)
         .expect(400)
 
@@ -245,25 +374,40 @@ describe('Module Management Endpoints', () => {
   })
 
   describe('POST /api/v1/modules/:id/complete', () => {
-    beforeEach(async () => {
-      // Start the module before each completion test
-      await prisma.completion.create({
-        data: {
-          userId: testUser.id,
-          moduleId: testModule.id,
-          score: null // in progress
-        }
-      })
-    })
-
     it('should complete module with quiz answers', async () => {
+      const { PrismaClient } = await import('@prisma/client')
+      const mockPrisma = new PrismaClient() as any
+
+      const mockModule = {
+        id: testModuleId,
+        title: 'Test Module',
+        description: 'A test module',
+        category: 'blockchain',
+        difficulty: 'beginner',
+        reward: 10.0
+      }
+
+      const existingCompletion = {
+        score: null, // in progress
+      }
+
+      const updatedCompletion = {
+        score: 100,
+        completedAt: new Date()
+      }
+
       const quizAnswers = [
         { questionId: 'q1', answer: 'answer1' },
         { questionId: 'q2', answer: 'answer2' }
       ]
 
+      mockPrisma.module.findUnique.mockResolvedValue(mockModule)
+      mockPrisma.completion.findUnique.mockResolvedValue(existingCompletion)
+      mockPrisma.completion.update.mockResolvedValue(updatedCompletion)
+      mockPrisma.transaction.create.mockResolvedValue({ id: 'transaction-id' })
+
       const response = await request(app)
-        .post(`/api/v1/modules/${testModule.id}/complete`)
+        .post(`/api/v1/modules/${testModuleId}/complete`)
         .set('Authorization', authToken)
         .send({ quizAnswers })
         .expect(200)
@@ -273,98 +417,105 @@ describe('Module Management Endpoints', () => {
       expect(response.body).toHaveProperty('isEligibleForReward')
       expect(response.body).toHaveProperty('reward')
       expect(response.body).toHaveProperty('completedAt')
-
-      // Verify completion record was updated
-      const completion = await prisma.completion.findUnique({
+      expect(mockPrisma.completion.update).toHaveBeenCalledWith({
         where: {
           userId_moduleId: {
-            userId: testUser.id,
-            moduleId: testModule.id
+            userId: testUserId,
+            moduleId: testModuleId
           }
+        },
+        data: {
+          score: 100,
+          completedAt: expect.any(Date)
         }
       })
-      expect(completion?.score).toBeGreaterThan(0)
-      expect(completion?.completedAt).toBeTruthy()
     })
 
     it('should create reward transaction for eligible scores', async () => {
-      const quizAnswers = [
-        { questionId: 'q1', answer: 'answer1' }
-      ]
+      const { PrismaClient } = await import('@prisma/client')
+      const mockPrisma = new PrismaClient() as any
+
+      const mockModule = {
+        id: testModuleId,
+        title: 'Test Module',
+        description: 'A test module',
+        category: 'blockchain',
+        difficulty: 'beginner',
+        reward: 10.0
+      }
+
+      const existingCompletion = { score: null }
+      const updatedCompletion = { score: 100, completedAt: new Date() }
+
+      const quizAnswers = [{ questionId: 'q1', answer: 'answer1' }]
+
+      mockPrisma.module.findUnique.mockResolvedValue(mockModule)
+      mockPrisma.completion.findUnique.mockResolvedValue(existingCompletion)
+      mockPrisma.completion.update.mockResolvedValue(updatedCompletion)
+      mockPrisma.transaction.create.mockResolvedValue({ id: 'transaction-id' })
 
       const response = await request(app)
-        .post(`/api/v1/modules/${testModule.id}/complete`)
+        .post(`/api/v1/modules/${testModuleId}/complete`)
         .set('Authorization', authToken)
         .send({ quizAnswers })
         .expect(200)
 
       expect(response.body.isEligibleForReward).toBe(true)
-      expect(response.body.reward).toBe(testModule.reward)
+      expect(response.body.reward).toBe(mockModule.reward)
       expect(response.body).toHaveProperty('rewardTransaction')
-
-      // Verify reward transaction was created
-      const transaction = await prisma.transaction.findFirst({
-        where: {
-          userId: testUser.id,
-          type: 'reward'
+      expect(mockPrisma.transaction.create).toHaveBeenCalledWith({
+        data: {
+          userId: testUserId,
+          amount: mockModule.reward,
+          type: 'reward',
+          status: 'pending'
         }
       })
-      expect(transaction).toBeTruthy()
-      expect(transaction?.amount).toBe(testModule.reward)
-      expect(transaction?.status).toBe('pending')
     })
 
     it('should return 401 for unauthenticated request', async () => {
       await request(app)
-        .post(`/api/v1/modules/${testModule.id}/complete`)
+        .post(`/api/v1/modules/${testModuleId}/complete`)
         .send({ quizAnswers: [] })
         .expect(401)
     })
 
     it('should return 404 for non-existent module', async () => {
-      const fakeId = '550e8400-e29b-41d4-a716-446655440000'
+      const { PrismaClient } = await import('@prisma/client')
+      const mockPrisma = new PrismaClient() as any
+
+      mockPrisma.module.findUnique.mockResolvedValue(null)
+
       await request(app)
-        .post(`/api/v1/modules/${fakeId}/complete`)
+        .post(`/api/v1/modules/${testModuleId}/complete`)
         .set('Authorization', authToken)
         .send({ quizAnswers: [] })
         .expect(404)
     })
 
     it('should return 400 if module not started', async () => {
-      // Delete the completion record
-      await prisma.completion.delete({
-        where: {
-          userId_moduleId: {
-            userId: testUser.id,
-            moduleId: testModule.id
-          }
-        }
-      })
+      const { PrismaClient } = await import('@prisma/client')
+      const mockPrisma = new PrismaClient() as any
+
+      mockPrisma.module.findUnique.mockResolvedValue({ id: testModuleId })
+      mockPrisma.completion.findUnique.mockResolvedValue(null)
 
       await request(app)
-        .post(`/api/v1/modules/${testModule.id}/complete`)
+        .post(`/api/v1/modules/${testModuleId}/complete`)
         .set('Authorization', authToken)
         .send({ quizAnswers: [] })
         .expect(400)
     })
 
     it('should return 400 if module already completed', async () => {
-      // Complete the module first
-      await prisma.completion.update({
-        where: {
-          userId_moduleId: {
-            userId: testUser.id,
-            moduleId: testModule.id
-          }
-        },
-        data: {
-          score: 85,
-          completedAt: new Date()
-        }
-      })
+      const { PrismaClient } = await import('@prisma/client')
+      const mockPrisma = new PrismaClient() as any
+
+      mockPrisma.module.findUnique.mockResolvedValue({ id: testModuleId })
+      mockPrisma.completion.findUnique.mockResolvedValue({ score: 85 })
 
       const response = await request(app)
-        .post(`/api/v1/modules/${testModule.id}/complete`)
+        .post(`/api/v1/modules/${testModuleId}/complete`)
         .set('Authorization', authToken)
         .send({ quizAnswers: [] })
         .expect(400)
@@ -374,13 +525,13 @@ describe('Module Management Endpoints', () => {
 
     it('should validate request body', async () => {
       await request(app)
-        .post(`/api/v1/modules/${testModule.id}/complete`)
+        .post(`/api/v1/modules/${testModuleId}/complete`)
         .set('Authorization', authToken)
         .send({ quizAnswers: 'invalid' })
         .expect(400)
 
       await request(app)
-        .post(`/api/v1/modules/${testModule.id}/complete`)
+        .post(`/api/v1/modules/${testModuleId}/complete`)
         .set('Authorization', authToken)
         .send({})
         .expect(400)
