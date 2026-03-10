@@ -23,6 +23,36 @@ export class UserController {
    *         description: User not found
    */
 
+  async getCurrentUser (req: Request, res: Response): Promise<void> {
+    try {
+      const userId = (req as any).user?.id
+      if (!userId) {
+        res.status(401).json({ error: 'Unauthorized' })
+        return
+      }
+      const user = await this.findUserById(userId)
+      if (!user) {
+        res.status(404).json({ error: 'User not found' })
+        return
+      }
+      res.json({
+        id: user.id,
+        email: user.email,
+        username: user.username,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        bio: user.bio,
+        avatar: user.avatar,
+        walletAddress: user.walletAddress,
+        isActive: user.isActive,
+        createdAt: user.createdAt,
+        updatedAt: user.updatedAt,
+      })
+    } catch (error) {
+      res.status(500).json({ error: 'Internal server error' })
+    }
+  }
+
   /**
    * @openapi
    * /users/profile:
@@ -49,6 +79,33 @@ export class UserController {
    *       500:
    *         description: Internal server error
    */
+
+  async updateProfile (req: Request, res: Response): Promise<void> {
+    try {
+      const userId = (req as any).user?.id
+      if (!userId) {
+        res.status(401).json({ error: 'Unauthorized' })
+        return
+      }
+      const data = req.body as UpdateUserData
+      const user = await this.updateUserProfile(userId, data)
+      res.json({
+        id: user.id,
+        email: user.email,
+        username: user.username,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        bio: user.bio,
+        avatar: user.avatar,
+        walletAddress: user.walletAddress,
+        isActive: user.isActive,
+        createdAt: user.createdAt,
+        updatedAt: user.updatedAt,
+      })
+    } catch (error) {
+      res.status(500).json({ error: 'Internal server error' })
+    }
+  }
 
   async getUserById (req: Request, res: Response): Promise<void> {
     try {
@@ -80,7 +137,7 @@ export class UserController {
 
   async changePassword (req: Request, res: Response): Promise<void> {
     try {
-      const userId = (req as any).user.id
+      const userId = (req as any).user?.id
       const { currentPassword, newPassword }: ChangePasswordData = req.body
 
       const user = await this.findUserById(userId)
@@ -140,6 +197,37 @@ export class UserController {
    *       500:
    *         description: Internal server error
    */
+
+  async updateWalletAddress (req: Request, res: Response): Promise<void> {
+    try {
+      const userId = (req as any).user?.id
+      if (!userId) {
+        res.status(401).json({ error: 'Unauthorized' })
+        return
+      }
+      const { walletAddress } = req.body as { walletAddress: string }
+      if (!this.isValidStellarAddress(walletAddress)) {
+        res.status(400).json({ error: 'Invalid Stellar wallet address' })
+        return
+      }
+      const user = await this.updateUserWallet(userId, walletAddress)
+      res.json({
+        id: user.id,
+        email: user.email,
+        username: user.username,
+        firstName: (user as any).firstName,
+        lastName: (user as any).lastName,
+        bio: (user as any).bio,
+        avatar: (user as any).avatar,
+        walletAddress: user.walletAddress,
+        isActive: user.isActive,
+        createdAt: user.createdAt,
+        updatedAt: user.updatedAt,
+      })
+    } catch (error) {
+      res.status(500).json({ error: 'Internal server error' })
+    }
+  }
 
   private async findUserById (id: string): Promise<User | null> {
     const mockUser: User = {

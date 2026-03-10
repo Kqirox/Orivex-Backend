@@ -30,7 +30,7 @@ export class RewardController {
    */
   getBalance = asyncHandler(
     async (req: Request, res: Response): Promise<void> => {
-      const userId = (req as any).user.id
+      const userId = (req as any).user?.id
 
       if (!userId) {
         throw new UnauthorizedError('User ID not found')
@@ -103,7 +103,7 @@ export class RewardController {
    */
   getHistory = asyncHandler(
     async (req: Request, res: Response): Promise<void> => {
-      const userId = (req as any).user.id
+      const userId = (req as any).user?.id
 
       if (!userId) {
         throw new UnauthorizedError('User ID not found')
@@ -223,7 +223,7 @@ export class RewardController {
    */
   withdraw = asyncHandler(
     async (req: Request, res: Response): Promise<void> => {
-      const userId = (req as any).user.id
+      const userId = (req as any).user?.id
 
       if (!userId) {
         throw new UnauthorizedError('User ID not found')
