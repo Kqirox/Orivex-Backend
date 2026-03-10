@@ -2,8 +2,6 @@ import express from 'express'
 import swaggerUi from 'swagger-ui-express'
 import swaggerJsdoc from 'swagger-jsdoc'
 import cors from 'cors'
-import * as fs from 'fs'
-import * as path from 'path'
 
 const app = express()
 const PORT = 5000
@@ -45,9 +43,9 @@ const options: swaggerJsdoc.Options = {
     ],
   },
   apis: ['./src/controllers/**/*.ts', './src/docs/*.ts'],
-};
+}
 
-const specs = swaggerJsdoc(options);
+const specs = swaggerJsdoc(options)
 
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(specs))
 
