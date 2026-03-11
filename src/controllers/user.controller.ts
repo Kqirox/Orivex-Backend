@@ -28,11 +28,13 @@ export class UserController {
       const userId = (req as any).user?.id
       if (!userId) {
         res.status(401).json({ error: 'Unauthorized' })
+
         return
       }
       const user = await this.findUserById(userId)
       if (!user) {
         res.status(404).json({ error: 'User not found' })
+
         return
       }
       res.json({
@@ -48,7 +50,7 @@ export class UserController {
         createdAt: user.createdAt,
         updatedAt: user.updatedAt,
       })
-    } catch (error) {
+    } catch {
       res.status(500).json({ error: 'Internal server error' })
     }
   }
@@ -85,6 +87,7 @@ export class UserController {
       const userId = (req as any).user?.id
       if (!userId) {
         res.status(401).json({ error: 'Unauthorized' })
+
         return
       }
       const data = req.body as UpdateUserData
@@ -102,7 +105,7 @@ export class UserController {
         createdAt: user.createdAt,
         updatedAt: user.updatedAt,
       })
-    } catch (error) {
+    } catch {
       res.status(500).json({ error: 'Internal server error' })
     }
   }
@@ -144,6 +147,7 @@ export class UserController {
       if (!user) {
         res.status(404).json({ error: 'User not found' })
 
+
         return
       }
 
@@ -151,13 +155,14 @@ export class UserController {
       if (!isCurrentPasswordValid) {
         res.status(400).json({ error: 'Current password is incorrect' })
 
+
         return
       }
 
       await this.updateUserPassword(userId, newPassword)
 
       res.json({ message: 'Password updated successfully' })
-    } catch (error) {
+    } catch {
       console.error('Error changing password:', error)
       res.status(500).json({ error: 'Internal server error' })
     }
@@ -203,11 +208,13 @@ export class UserController {
       const userId = (req as any).user?.id
       if (!userId) {
         res.status(401).json({ error: 'Unauthorized' })
+
         return
       }
       const { walletAddress } = req.body as { walletAddress: string }
       if (!this.isValidStellarAddress(walletAddress)) {
         res.status(400).json({ error: 'Invalid Stellar wallet address' })
+
         return
       }
       const user = await this.updateUserWallet(userId, walletAddress)
@@ -224,7 +231,7 @@ export class UserController {
         createdAt: user.createdAt,
         updatedAt: user.updatedAt,
       })
-    } catch (error) {
+    } catch {
       res.status(500).json({ error: 'Internal server error' })
     }
   }
