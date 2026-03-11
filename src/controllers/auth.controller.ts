@@ -10,9 +10,30 @@ const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '1d'
 
 export class AuthController {
     /**
-     * @route POST /api/v1/auth/register
-     * @desc Register a new user
-     * @access Public
+     * @openapi
+     * /auth/register:
+     *   post:
+     *     summary: Register a new user
+     *     tags: [Auth]
+     *     requestBody:
+     *       required: true
+     *       content:
+     *         application/json:
+     *           schema:
+     *             $ref: '#/components/schemas/RegisterInput'
+     *     responses:
+     *       201:
+     *         description: User registered successfully
+     *         content:
+     *           application/json:
+     *             schema:
+     *               $ref: '#/components/schemas/AuthResponse'
+     *       400:
+     *         description: Validation failed
+     *       409:
+     *         description: User already exists
+     *       500:
+     *         description: Internal server error
      */
     async register(req: Request, res: Response): Promise<void> {
         try {
@@ -79,9 +100,30 @@ export class AuthController {
     }
 
     /**
-     * @route POST /api/v1/auth/login
-     * @desc Login a user
-     * @access Public
+     * @openapi
+     * /auth/login:
+     *   post:
+     *     summary: Login a user
+     *     tags: [Auth]
+     *     requestBody:
+     *       required: true
+     *       content:
+     *         application/json:
+     *           schema:
+     *             $ref: '#/components/schemas/LoginInput'
+     *     responses:
+     *       200:
+     *         description: Login successful
+     *         content:
+     *           application/json:
+     *             schema:
+     *               $ref: '#/components/schemas/AuthResponse'
+     *       400:
+     *         description: Validation failed
+     *       401:
+     *         description: Invalid credentials
+     *       500:
+     *         description: Internal server error
      */
     async login(req: Request, res: Response): Promise<void> {
         try {
@@ -143,9 +185,14 @@ export class AuthController {
     }
 
     /**
-     * @route POST /api/v1/auth/logout
-     * @desc Logout user (client-side usually handles this by deleting token, but can track server-side)
-     * @access Private (optional, here public)
+     * @openapi
+     * /auth/logout:
+     *   post:
+     *     summary: Logout user
+     *     tags: [Auth]
+     *     responses:
+     *       200:
+     *         description: Logged out successfully
      */
     async logout(req: Request, res: Response): Promise<void> {
         // For stateless JWT, we can't truly "logout" unless we blacklist tokens.

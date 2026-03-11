@@ -11,12 +11,26 @@ export class RewardController {
   }
 
   /**
-   * GET /rewards/balance
-   * Retrieve the current user's reward balance
+   * @openapi
+   * /rewards/balance:
+   *   get:
+   *     summary: Get current user reward balance
+   *     tags: [Rewards]
+   *     security:
+   *       - bearerAuth: []
+   *     responses:
+   *       200:
+   *         description: Reward balance retrieved successfully
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/RewardBalance'
+   *       401:
+   *         description: Unauthorized
    */
   getBalance = asyncHandler(
     async (req: Request, res: Response): Promise<void> => {
-      const userId = (req as any).user.id
+      const userId = (req as any).user?.id
 
       if (!userId) {
         throw new UnauthorizedError('User ID not found')
@@ -39,13 +53,57 @@ export class RewardController {
   )
 
   /**
-   * GET /rewards/history
-   * Retrieve transaction history with optional filtering and pagination
-   * Query params: type, status, fromDate, toDate, limit, offset
+   * @openapi
+   * /rewards/history:
+   *   get:
+   *     summary: Get transaction history
+   *     tags: [Rewards]
+   *     security:
+   *       - bearerAuth: []
+   *     parameters:
+   *       - in: query
+   *         name: type
+   *         schema:
+   *           type: string
+   *           enum: [module_reward, streak_bonus, referral_reward, withdrawal]
+   *       - in: query
+   *         name: status
+   *         schema:
+   *           type: string
+   *           enum: [pending, completed, failed]
+   *       - in: query
+   *         name: fromDate
+   *         schema:
+   *           type: string
+   *           format: date-time
+   *       - in: query
+   *         name: toDate
+   *         schema:
+   *           type: string
+   *           format: date-time
+   *       - in: query
+   *         name: limit
+   *         schema:
+   *           type: integer
+   *           default: 20
+   *       - in: query
+   *         name: offset
+   *         schema:
+   *           type: integer
+   *           default: 0
+   *     responses:
+   *       200:
+   *         description: Transaction history retrieved successfully
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/TransactionHistory'
+   *       401:
+   *         description: Unauthorized
    */
   getHistory = asyncHandler(
     async (req: Request, res: Response): Promise<void> => {
-      const userId = (req as any).user.id
+      const userId = (req as any).user?.id
 
       if (!userId) {
         throw new UnauthorizedError('User ID not found')
@@ -138,13 +196,34 @@ export class RewardController {
   )
 
   /**
-   * POST /rewards/withdraw
-   * Process a withdrawal request
-   * Body: walletAddress, amount, memo (optional)
+   * @openapi
+   * /rewards/withdraw:
+   *   post:
+   *     summary: Process withdrawal request
+   *     tags: [Rewards]
+   *     security:
+   *       - bearerAuth: []
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             $ref: '#/components/schemas/WithdrawalInput'
+   *     responses:
+   *       201:
+   *         description: Withdrawal processed successfully
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/WithdrawalResponse'
+   *       400:
+   *         description: Invalid input or insufficient balance
+   *       401:
+   *         description: Unauthorized
    */
   withdraw = asyncHandler(
     async (req: Request, res: Response): Promise<void> => {
-      const userId = (req as any).user.id
+      const userId = (req as any).user?.id
 
       if (!userId) {
         throw new UnauthorizedError('User ID not found')
