@@ -19,6 +19,9 @@ model User {
   completions     Completion[]
   credentials     Credential[]
   transactions    Transaction[]
+  deviceTokens    DeviceToken[]
+  notificationPref NotificationPreference?
+  notifications   NotificationLog[]
 
   @@map("users")
 }
@@ -110,4 +113,41 @@ model WebhookDelivery {
   nextAttemptAt  DateTime?       @default(now())
   lastAttemptAt  DateTime?
   createdAt      DateTime        @default(now())
+}
+
+model DeviceToken {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  token     String   @unique
+  platform  String   // "ios", "android", "web"
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model NotificationPreference {
+  id              String   @id @default(uuid())
+  userId          String   @unique
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  rewardReceipt   Boolean  @default(true)
+  quizPassFail    Boolean  @default(true)
+  streakReminders Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model NotificationLog {
+  id           String   @id @default(uuid())
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type         String   // "reward", "quiz", "streak"
+  title        String
+  body         String
+  status       String   @default("pending") // pending, sent, failed, dead-letter
+  error        String?
+  attemptCount Int      @default(0)
+  maxAttempts  Int      @default(5)
+  nextAttemptAt DateTime? @default(now())
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 }
