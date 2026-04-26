@@ -1,6 +1,9 @@
 import { Request, Response } from 'express'
 import { z } from 'zod'
 import { prisma } from '../config/database'
+import { NotificationService } from '../services/notification.service'
+
+const notificationService = new NotificationService()
 
 // Query parameter schemas for validation
 const listModulesSchema = z.object({
@@ -432,6 +435,16 @@ export const completeModule = async (req: Request, res: Response) => {
         }
       })
     }
+
+    // Fire push notification for quiz pass/fail (non-blocking)
+    notificationService.queueNotification(
+      req.user.id,
+      'quizPassFail',
+      isEligibleForReward ? 'Quiz Passed!' : 'Quiz Completed',
+      isEligibleForReward
+        ? `Great job! You scored ${score}% on "${module.title}" and earned ${module.reward} XLM.`
+        : `You scored ${score}% on "${module.title}". Keep practicing to earn rewards!`
+    ).catch(err => console.error('[Notifications] Quiz notification error:', err))
 
     res.json({
       message: 'Module completed successfully',

@@ -1,4 +1,5 @@
 import { StellarService } from './stellar.service'
+import { NotificationService } from './notification.service'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -106,9 +107,11 @@ const pendingWithdrawals = new Map<string, WithdrawalRequest>()
 
 export class RewardService {
   private stellarService: StellarService
+  private notificationService: NotificationService
 
   constructor(stellarService?: StellarService) {
     this.stellarService = stellarService ?? new StellarService()
+    this.notificationService = new NotificationService()
   }
 
   // ── Public API ──────────────────────────────────────────────────────────────
@@ -177,6 +180,14 @@ export class RewardService {
     if (referrerId && referralBonus > 0) {
       await this.payReferralBonus(referrerId, claim.moduleId, stellarTxHash)
     }
+
+    // 8. Send push notification for reward receipt (non-blocking)
+    this.notificationService.queueNotification(
+      claim.userId,
+      'rewardReceipt',
+      'Reward Received!',
+      `You earned ${totalAmount.toFixed(2)} XLM for completing module ${module.title}.`
+    ).catch(err => console.error('[Notifications] Reward notification error:', err))
 
     return {
       transactionId,
