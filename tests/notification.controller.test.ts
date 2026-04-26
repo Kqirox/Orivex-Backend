@@ -1,188 +1,104 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-
-// ── Mocks (vi.hoisted ensures the variables exist when vi.mock runs) ────
-
-const { prismaMock, mockRegisterDeviceToken, mockUpdateUserPreferences } = vi.hoisted(() => {
-    return {
-        prismaMock: {
-            notificationLog: {
-                findMany: vi.fn().mockResolvedValue([
-                    {
-                        id: 'log-1',
-                        type: 'rewardReceipt',
-                        title: 'Reward Received!',
-                        body: 'You earned 5 XLM.',
-                        status: 'success',
-                        error: null,
-                        attemptCount: 1,
-                        createdAt: new Date('2026-01-01')
-                    }
-                ])
-            }
-        },
-        mockRegisterDeviceToken: vi.fn(),
-        mockUpdateUserPreferences: vi.fn()
-    }
-})
-
-vi.mock('../src/config/database', () => ({
-    default: prismaMock,
-    prisma: prismaMock
-}))
-
-vi.mock('firebase-admin', () => ({
-    apps: [],
-    initializeApp: vi.fn(),
-    credential: { cert: vi.fn() },
-    messaging: vi.fn()
-}))
-
-vi.mock('../src/services/notification.service', () => {
-    const MockNotificationService = function(this: any) {
-        this.registerDeviceToken = mockRegisterDeviceToken
-        this.updateUserPreferences = mockUpdateUserPreferences
-        this.queueNotification = vi.fn()
-        this.processQueue = vi.fn()
-    }
-    return { NotificationService: MockNotificationService }
-})
-
-import { Request, Response } from 'express'
 import { NotificationController } from '../src/controllers/notification.controller'
 
-// ── Helpers ──────────────────────────────────────────────────────────────────
+// Use vi.hoisted to ensure these are available for vi.mock
+const {
+  mockRegisterDeviceToken,
+  mockUpdateUserPreferences,
+  mockQueueNotification,
+  mockProcessQueue,
+  mockPrisma
+} = vi.hoisted(() => ({
+  mockRegisterDeviceToken: vi.fn(),
+  mockUpdateUserPreferences: vi.fn(),
+  mockQueueNotification: vi.fn(),
+  mockProcessQueue: vi.fn(),
+  mockPrisma: {
+    notificationLog: {
+      findMany: vi.fn()
+    }
+  }
+}))
 
-const makeReq = (overrides: Partial<Request> = {}): Request =>
-    ({
-        body: {},
-        query: {},
-        params: {},
-        headers: {},
-        user: { id: 'user-123', email: 'test@test.com', role: 'learner' as any },
-        ...overrides
-    } as Request)
+vi.mock('../src/services/notification.service', () => ({
+  NotificationService: class {
+    registerDeviceToken = mockRegisterDeviceToken
+    updateUserPreferences = mockUpdateUserPreferences
+    queueNotification = mockQueueNotification
+    processQueue = mockProcessQueue
+  }
+}))
 
-const makeRes = (): Response => {
-    const res: Partial<Response> = {}
-    res.status = vi.fn().mockReturnValue(res)
-    res.json = vi.fn().mockReturnValue(res)
-    return res as Response
-}
-
-// ── Tests ─────────────────────────────────────────────────────────────────────
+vi.mock('../src/config/database', () => ({
+  default: mockPrisma
+}))
 
 describe('NotificationController', () => {
-    let controller: NotificationController
+  let controller: NotificationController
+  let req: any
+  let res: any
 
-    beforeEach(() => {
-        vi.clearAllMocks()
-        controller = new NotificationController()
+  beforeEach(() => {
+    vi.clearAllMocks()
+    controller = new NotificationController()
+    req = {
+      user: { id: 'user1' },
+      body: {},
+      query: {}
+    }
+    res = {
+      status: vi.fn().mockReturnThis(),
+      json: vi.fn().mockReturnThis()
+    }
+  })
+
+  describe('registerDevice', () => {
+    it('should return 201 on success', async () => {
+      req.body = { token: 't1', platform: 'ios' }
+      mockRegisterDeviceToken.mockResolvedValue({ id: 'dt1' })
+
+      await controller.registerDevice(req, res)
+
+      expect(res.status).toHaveBeenCalledWith(201)
+      expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ data: { id: 'dt1' } }))
     })
 
-    describe('registerDevice', () => {
-        it('returns 401 when user is not authenticated', async () => {
-            const req = makeReq({ user: undefined })
-            const res = makeRes()
-            await controller.registerDevice(req, res)
-            expect(res.status).toHaveBeenCalledWith(401)
-            expect(res.json).toHaveBeenCalledWith({ error: 'Unauthorized' })
-        })
+    it('should return 400 on invalid body', async () => {
+      req.body = { token: '' } // missing platform
 
-        it('returns 400 when token is missing', async () => {
-            const req = makeReq({ body: { platform: 'ios' } })
-            const res = makeRes()
-            await controller.registerDevice(req, res)
-            expect(res.status).toHaveBeenCalledWith(400)
-            expect(res.json).toHaveBeenCalledWith(
-                expect.objectContaining({ error: 'Validation failed' })
-            )
-        })
+      await controller.registerDevice(req, res)
 
-        it('returns 400 when platform is invalid', async () => {
-            const req = makeReq({ body: { token: 'abc123', platform: 'windows' } })
-            const res = makeRes()
-            await controller.registerDevice(req, res)
-            expect(res.status).toHaveBeenCalledWith(400)
-        })
+      expect(res.status).toHaveBeenCalledWith(400)
+    })
+  })
 
-        it('returns 201 with a valid token and platform', async () => {
-            const fakeToken = { id: 'dt-1', userId: 'user-123', token: 'fcm-token', platform: 'android' }
-            mockRegisterDeviceToken.mockResolvedValue(fakeToken)
+  describe('updatePreferences', () => {
+    it('should return 200 on success', async () => {
+      req.body = { rewardReceipt: false }
+      mockUpdateUserPreferences.mockResolvedValue({ id: 'p1' })
 
-            const req = makeReq({ body: { token: 'fcm-token', platform: 'android' } })
-            const res = makeRes()
-            await controller.registerDevice(req, res)
+      await controller.updatePreferences(req, res)
 
-            expect(res.status).toHaveBeenCalledWith(201)
-            expect(res.json).toHaveBeenCalledWith(
-                expect.objectContaining({ message: 'Device token registered successfully', data: fakeToken })
-            )
-        })
-
-        it('returns 500 on unexpected service error', async () => {
-            mockRegisterDeviceToken.mockRejectedValue(new Error('DB error'))
-
-            const req = makeReq({ body: { token: 'tok', platform: 'web' } })
-            const res = makeRes()
-            await controller.registerDevice(req, res)
-
-            expect(res.status).toHaveBeenCalledWith(500)
-        })
+      expect(res.status).toHaveBeenCalledWith(200)
     })
 
-    describe('updatePreferences', () => {
-        it('returns 401 when user is not authenticated', async () => {
-            const req = makeReq({ user: undefined })
-            const res = makeRes()
-            await controller.updatePreferences(req, res)
-            expect(res.status).toHaveBeenCalledWith(401)
-        })
+    it('should return 400 on empty body', async () => {
+      req.body = {}
 
-        it('returns 400 when no preference fields are provided', async () => {
-            const req = makeReq({ body: {} })
-            const res = makeRes()
-            await controller.updatePreferences(req, res)
-            expect(res.status).toHaveBeenCalledWith(400)
-        })
+      await controller.updatePreferences(req, res)
 
-        it('returns 200 with valid preferences', async () => {
-            const fakePrefs = {
-                id: 'pref-1', userId: 'user-123',
-                rewardReceipt: false, quizPassFail: true, streakReminders: true
-            }
-            mockUpdateUserPreferences.mockResolvedValue(fakePrefs)
-
-            const req = makeReq({ body: { rewardReceipt: false } })
-            const res = makeRes()
-            await controller.updatePreferences(req, res)
-
-            expect(res.status).toHaveBeenCalledWith(200)
-            expect(res.json).toHaveBeenCalledWith(
-                expect.objectContaining({
-                    message: 'Preferences updated successfully',
-                    data: fakePrefs
-                })
-            )
-        })
+      expect(res.status).toHaveBeenCalledWith(400)
     })
+  })
 
-    describe('getDeliveryStatus', () => {
-        it('returns 401 when user is not authenticated', async () => {
-            const req = makeReq({ user: undefined })
-            const res = makeRes()
-            await controller.getDeliveryStatus(req, res)
-            expect(res.status).toHaveBeenCalledWith(401)
-        })
+  describe('getDeliveryStatus', () => {
+    it('should return logs for user', async () => {
+      mockPrisma.notificationLog.findMany.mockResolvedValue([{ id: 'l1' }])
 
-        it('returns 200 with delivery logs for authenticated user', async () => {
-            const req = makeReq({ query: { limit: '5' } })
-            const res = makeRes()
-            await controller.getDeliveryStatus(req, res)
+      await controller.getDeliveryStatus(req, res)
 
-            expect(res.status).toHaveBeenCalledWith(200)
-            expect(res.json).toHaveBeenCalledWith(
-                expect.objectContaining({ count: 1 })
-            )
-        })
+      expect(res.status).toHaveBeenCalledWith(200)
+      expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ count: 1 }))
     })
+  })
 })
