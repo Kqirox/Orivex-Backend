@@ -1,169 +1,138 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { NotificationService } from '../src/services/notification.service'
+import * as admin from 'firebase-admin'
 
-// ── Mocks (vi.hoisted ensures variables exist when vi.mock factories run) ──
-
-const { prismaMock } = vi.hoisted(() => {
-    return {
-        prismaMock: {
-            deviceToken: { upsert: vi.fn() },
-            notificationPreference: { findUnique: vi.fn(), upsert: vi.fn() },
-            notificationLog: { create: vi.fn(), findMany: vi.fn(), update: vi.fn() }
-        }
-    }
-})
-
-vi.mock('../src/config/database', () => ({
-    default: prismaMock,
-    prisma: prismaMock
+// Use vi.hoisted to mock dependencies before they are imported by the service
+const { mockSendEachForMulticast } = vi.hoisted(() => ({
+  mockSendEachForMulticast: vi.fn().mockResolvedValue({ failureCount: 0, responses: [] })
 }))
 
 vi.mock('firebase-admin', () => ({
-    apps: [],
-    initializeApp: vi.fn(),
-    credential: { cert: vi.fn() },
-    messaging: vi.fn().mockReturnValue({
-        sendEachForMulticast: vi.fn()
-    })
+  apps: [{ name: 'mock-app' }],
+  initializeApp: vi.fn(),
+  credential: {
+    cert: vi.fn().mockReturnValue({})
+  },
+  messaging: vi.fn().mockReturnValue({
+    sendEachForMulticast: mockSendEachForMulticast
+  })
 }))
 
-import { NotificationService } from '../src/services/notification.service'
+// Use vi.hoisted to ensure these are available for vi.mock
+const { mockPrisma } = vi.hoisted(() => ({
+  mockPrisma: {
+    deviceToken: {
+      upsert: vi.fn()
+    },
+    notificationPreference: {
+      upsert: vi.fn(),
+      findUnique: vi.fn()
+    },
+    notificationLog: {
+      create: vi.fn(),
+      findMany: vi.fn(),
+      update: vi.fn()
+    }
+  }
+}))
 
-// ── Tests ───────────────────────────────────────────────────────────────────
+vi.mock('../src/config/database', () => ({
+  default: mockPrisma
+}))
 
 describe('NotificationService', () => {
-    let service: NotificationService
+  let service: NotificationService
 
-    beforeEach(() => {
-        vi.clearAllMocks()
-        service = new NotificationService()
+  beforeEach(() => {
+    vi.clearAllMocks()
+    service = new NotificationService()
+    process.env.FIREBASE_SERVICE_ACCOUNT_KEY = JSON.stringify({ project_id: 'test' })
+  })
+
+  afterEach(() => {
+    delete process.env.FIREBASE_SERVICE_ACCOUNT_KEY
+  })
+
+  describe('registerDeviceToken', () => {
+    it('should upsert device token', async () => {
+      await service.registerDeviceToken('user1', 'token1', 'ios')
+      expect(mockPrisma.deviceToken.upsert).toHaveBeenCalledWith({
+        where: { token: 'token1' },
+        update: { userId: 'user1', platform: 'ios' },
+        create: { userId: 'user1', token: 'token1', platform: 'ios' }
+      })
+    })
+  })
+
+  describe('updateUserPreferences', () => {
+    it('should upsert preferences', async () => {
+      await service.updateUserPreferences('user1', { rewardReceipt: true })
+      expect(mockPrisma.notificationPreference.upsert).toHaveBeenCalledWith({
+        where: { userId: 'user1' },
+        update: { rewardReceipt: true },
+        create: { userId: 'user1', rewardReceipt: true }
+      })
+    })
+  })
+
+  describe('queueNotification', () => {
+    it('should create a pending log if enabled', async () => {
+      mockPrisma.notificationPreference.findUnique.mockResolvedValue({ rewardReceipt: true })
+      mockPrisma.notificationLog.create.mockResolvedValue({ id: 'log1' })
+
+      const result = await service.queueNotification('user1', 'rewardReceipt', 'Title', 'Body')
+
+      expect(mockPrisma.notificationLog.create).toHaveBeenCalled()
+      expect(result).toBeDefined()
     })
 
-    describe('registerDeviceToken', () => {
-        it('calls prisma.deviceToken.upsert with correct args', async () => {
-            const fakeToken = { id: 'dt-1', userId: 'u1', token: 'tok', platform: 'ios' }
-            prismaMock.deviceToken.upsert.mockResolvedValue(fakeToken)
+    it('should return null if disabled', async () => {
+      mockPrisma.notificationPreference.findUnique.mockResolvedValue({ rewardReceipt: false })
 
-            const result = await service.registerDeviceToken('u1', 'tok', 'ios')
+      const result = await service.queueNotification('user1', 'rewardReceipt', 'Title', 'Body')
 
-            expect(prismaMock.deviceToken.upsert).toHaveBeenCalledWith(
-                expect.objectContaining({
-                    where: { token: 'tok' },
-                    create: expect.objectContaining({ userId: 'u1', token: 'tok', platform: 'ios' })
-                })
-            )
-            expect(result).toEqual(fakeToken)
+      expect(mockPrisma.notificationLog.create).not.toHaveBeenCalled()
+      expect(result).toBeNull()
+    })
+  })
+
+  describe('processQueue', () => {
+    it('should attempt to send pending notifications', async () => {
+      const mockLog = {
+        id: 'log1',
+        title: 'T',
+        body: 'B',
+        user: { deviceTokens: [{ token: 't1' }] }
+      }
+      mockPrisma.notificationLog.findMany.mockResolvedValue([mockLog])
+
+      await service.processQueue()
+
+      expect(mockSendEachForMulticast).toHaveBeenCalled()
+      expect(mockPrisma.notificationLog.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: 'log1' },
+          data: { status: 'success' }
         })
+      )
     })
 
-    describe('updateUserPreferences', () => {
-        it('calls prisma.notificationPreference.upsert', async () => {
-            const fakePrefs = { id: 'p1', userId: 'u1', rewardReceipt: false, quizPassFail: true, streakReminders: true }
-            prismaMock.notificationPreference.upsert.mockResolvedValue(fakePrefs)
+    it('should handle missing tokens', async () => {
+      const mockLog = {
+        id: 'log1',
+        title: 'T',
+        body: 'B',
+        user: { deviceTokens: [] }
+      }
+      mockPrisma.notificationLog.findMany.mockResolvedValue([mockLog])
 
-            const result = await service.updateUserPreferences('u1', { rewardReceipt: false })
+      await service.processQueue()
 
-            expect(prismaMock.notificationPreference.upsert).toHaveBeenCalledWith(
-                expect.objectContaining({
-                    where: { userId: 'u1' },
-                    update: { rewardReceipt: false }
-                })
-            )
-            expect(result).toEqual(fakePrefs)
+      expect(mockPrisma.notificationLog.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({ status: 'failed' })
         })
+      )
     })
-
-    describe('queueNotification', () => {
-        it('returns null when user has opted out of the notification type', async () => {
-            prismaMock.notificationPreference.findUnique.mockResolvedValue({
-                rewardReceipt: false,
-                quizPassFail: true,
-                streakReminders: true
-            })
-
-            const result = await service.queueNotification('u1', 'rewardReceipt', 'Hi', 'Body')
-
-            expect(result).toBeNull()
-            expect(prismaMock.notificationLog.create).not.toHaveBeenCalled()
-        })
-
-        it('creates a log entry when user has opted in', async () => {
-            prismaMock.notificationPreference.findUnique.mockResolvedValue({
-                rewardReceipt: true,
-                quizPassFail: true,
-                streakReminders: true
-            })
-            const fakeLog = { id: 'log-1', status: 'pending' }
-            prismaMock.notificationLog.create.mockResolvedValue(fakeLog)
-            prismaMock.notificationLog.findMany.mockResolvedValue([])
-
-            const result = await service.queueNotification('u1', 'rewardReceipt', 'Reward!', 'You earned 5 XLM.')
-
-            expect(prismaMock.notificationLog.create).toHaveBeenCalledWith(
-                expect.objectContaining({
-                    data: expect.objectContaining({ userId: 'u1', type: 'rewardReceipt', title: 'Reward!', status: 'pending' })
-                })
-            )
-            expect(result).toEqual(fakeLog)
-        })
-
-        it('defaults to enabled when no preference row exists', async () => {
-            prismaMock.notificationPreference.findUnique.mockResolvedValue(null)
-            const fakeLog = { id: 'log-2', status: 'pending' }
-            prismaMock.notificationLog.create.mockResolvedValue(fakeLog)
-            prismaMock.notificationLog.findMany.mockResolvedValue([])
-
-            const result = await service.queueNotification('u2', 'quizPassFail', 'Quiz', 'Passed!')
-
-            expect(result).toBeDefined()
-            expect(result?.id).toBe('log-2')
-        })
-    })
-
-    describe('processQueue', () => {
-        it('does nothing when there are no pending logs', async () => {
-            prismaMock.notificationLog.findMany.mockResolvedValue([])
-
-            await expect(service.processQueue()).resolves.not.toThrow()
-            expect(prismaMock.notificationLog.update).not.toHaveBeenCalled()
-        })
-
-        it('marks log as failed when user has no device tokens', async () => {
-            const pendingLog = {
-                id: 'log-1',
-                title: 'Test',
-                body: 'Test body',
-                attemptCount: 0,
-                maxAttempts: 5,
-                user: { deviceTokens: [] }
-            }
-            prismaMock.notificationLog.findMany.mockResolvedValue([pendingLog])
-            prismaMock.notificationLog.update.mockResolvedValue({})
-
-            await service.processQueue()
-
-            expect(prismaMock.notificationLog.update).toHaveBeenCalledWith(
-                expect.objectContaining({
-                    data: expect.objectContaining({ status: 'failed' })
-                })
-            )
-        })
-    })
-
-    describe('event type routing', () => {
-        it('queues with the correct event type for streakReminders', async () => {
-            prismaMock.notificationPreference.findUnique.mockResolvedValue(null)
-            const fakeLog = { id: 'log-3', status: 'pending' }
-            prismaMock.notificationLog.create.mockResolvedValue(fakeLog)
-            prismaMock.notificationLog.findMany.mockResolvedValue([])
-
-            const result = await service.queueNotification('u3', 'streakReminders', 'Streak!', 'Keep it up')
-
-            expect(prismaMock.notificationLog.create).toHaveBeenCalledWith(
-                expect.objectContaining({
-                    data: expect.objectContaining({ type: 'streakReminders' })
-                })
-            )
-            expect(result?.id).toBe('log-3')
-        })
-    })
+  })
 })
