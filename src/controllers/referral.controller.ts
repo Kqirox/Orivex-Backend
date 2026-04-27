@@ -35,6 +35,7 @@ export class ReferralController {
         message: 'Referral code already exists',
         data: { code: existing.code },
       })
+
       return
     }
 

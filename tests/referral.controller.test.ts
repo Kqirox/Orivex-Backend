@@ -26,6 +26,8 @@ vi.mock('../src/config/database', () => ({
 
 import prisma from '../src/config/database'
 
+const flushPromises = () => new Promise<void>((resolve) => setTimeout(resolve, 0))
+
 interface AuthRequest extends Request {
   user?: { id: string; email: string; role: string }
 }
@@ -50,7 +52,8 @@ describe('ReferralController', () => {
         id: 'rc-1', code: 'ABCD1234', userId: 'user-1', createdAt: new Date(), referrals: [],
       } as any)
 
-      await controller.generateCode(req as Request, res as Response, next)
+      controller.generateCode(req as Request, res as Response, next)
+      await flushPromises()
 
       expect(res.status).toHaveBeenCalledWith(200)
       expect(res.json).toHaveBeenCalledWith(
@@ -64,7 +67,8 @@ describe('ReferralController', () => {
         id: 'rc-2', code: 'NEWCODE1', userId: 'user-1', createdAt: new Date(),
       } as any)
 
-      await controller.generateCode(req as Request, res as Response, next)
+      controller.generateCode(req as Request, res as Response, next)
+      await flushPromises()
 
       expect(prisma.referralCode.create).toHaveBeenCalled()
       expect(res.status).toHaveBeenCalledWith(201)
@@ -72,7 +76,10 @@ describe('ReferralController', () => {
 
     it('throws UnauthorizedError when user is missing', async () => {
       req.user = undefined
-      await controller.generateCode(req as Request, res as Response, next)
+
+      controller.generateCode(req as Request, res as Response, next)
+      await flushPromises()
+
       expect(next).toHaveBeenCalledWith(expect.objectContaining({ message: 'User ID not found' }))
     })
   })
@@ -84,13 +91,19 @@ describe('ReferralController', () => {
 
     it('throws BadRequestError when code is missing', async () => {
       req.body = {}
-      await controller.applyCode(req as Request, res as Response, next)
+
+      controller.applyCode(req as Request, res as Response, next)
+      await flushPromises()
+
       expect(next).toHaveBeenCalledWith(expect.objectContaining({ message: 'Referral code is required' }))
     })
 
     it('throws NotFoundError for unknown code', async () => {
       vi.mocked(prisma.referralCode.findUnique).mockResolvedValue(null)
-      await controller.applyCode(req as Request, res as Response, next)
+
+      controller.applyCode(req as Request, res as Response, next)
+      await flushPromises()
+
       expect(next).toHaveBeenCalledWith(expect.objectContaining({ message: 'Referral code not found' }))
     })
 
@@ -98,7 +111,10 @@ describe('ReferralController', () => {
       vi.mocked(prisma.referralCode.findUnique).mockResolvedValue({
         id: 'rc-1', code: 'REFCODE1', userId: 'user-1', createdAt: new Date(),
       } as any)
-      await controller.applyCode(req as Request, res as Response, next)
+
+      controller.applyCode(req as Request, res as Response, next)
+      await flushPromises()
+
       expect(next).toHaveBeenCalledWith(expect.objectContaining({ message: 'Self-referrals are not allowed' }))
     })
 
@@ -107,7 +123,10 @@ describe('ReferralController', () => {
         id: 'rc-1', code: 'REFCODE1', userId: 'user-2', createdAt: new Date(),
       } as any)
       vi.mocked(prisma.referral.findUnique).mockResolvedValue({ id: 'ref-1' } as any)
-      await controller.applyCode(req as Request, res as Response, next)
+
+      controller.applyCode(req as Request, res as Response, next)
+      await flushPromises()
+
       expect(next).toHaveBeenCalledWith(expect.objectContaining({ message: 'You have already used a referral code' }))
     })
 
@@ -119,7 +138,8 @@ describe('ReferralController', () => {
       vi.mocked(prisma.referral.findFirst).mockResolvedValue(null)
       vi.mocked(prisma.referral.create).mockResolvedValue({ id: 'ref-new' } as any)
 
-      await controller.applyCode(req as Request, res as Response, next)
+      controller.applyCode(req as Request, res as Response, next)
+      await flushPromises()
 
       expect(prisma.referral.create).toHaveBeenCalled()
       expect(res.status).toHaveBeenCalledWith(201)
@@ -144,7 +164,8 @@ describe('ReferralController', () => {
         },
       ] as any)
 
-      await controller.getStats(req as Request, res as Response, next)
+      controller.getStats(req as Request, res as Response, next)
+      await flushPromises()
 
       expect(res.status).toHaveBeenCalledWith(200)
       expect(res.json).toHaveBeenCalledWith(
@@ -161,7 +182,10 @@ describe('ReferralController', () => {
 
     it('throws UnauthorizedError when user is missing', async () => {
       req.user = undefined
-      await controller.getStats(req as Request, res as Response, next)
+
+      controller.getStats(req as Request, res as Response, next)
+      await flushPromises()
+
       expect(next).toHaveBeenCalledWith(expect.objectContaining({ message: 'User ID not found' }))
     })
   })
