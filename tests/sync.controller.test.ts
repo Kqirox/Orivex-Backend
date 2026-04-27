@@ -22,6 +22,8 @@ vi.mock('../src/config/database', () => ({
 
 import prisma from '../src/config/database'
 
+const flushPromises = () => new Promise<void>((resolve) => setTimeout(resolve, 0))
+
 interface AuthRequest extends Request {
   user?: { id: string; email: string; role: string }
 }
@@ -67,19 +69,28 @@ describe('SyncController', () => {
     it('throws UnauthorizedError when user is missing', async () => {
       req.user = undefined
       req.body = { events: [makeEvent()] }
-      await controller.syncProgress(req as Request, res as Response, next)
+
+      controller.syncProgress(req as Request, res as Response, next)
+      await flushPromises()
+
       expect(next).toHaveBeenCalledWith(expect.objectContaining({ message: 'User ID not found' }))
     })
 
     it('throws BadRequestError when events is not an array', async () => {
       req.body = { events: 'not-an-array' }
-      await controller.syncProgress(req as Request, res as Response, next)
+
+      controller.syncProgress(req as Request, res as Response, next)
+      await flushPromises()
+
       expect(next).toHaveBeenCalledWith(expect.objectContaining({ message: 'events must be a non-empty array' }))
     })
 
     it('rejects event with missing required fields', async () => {
       req.body = { events: [{ idempotencyKey: 'idem-1' }] }
-      await controller.syncProgress(req as Request, res as Response, next)
+
+      controller.syncProgress(req as Request, res as Response, next)
+      await flushPromises()
+
       expect(res.status).toHaveBeenCalledWith(200)
       const call = vi.mocked(res.json).mock.calls[0][0]
       expect(call.data.results[0].status).toBe('rejected')
@@ -88,7 +99,10 @@ describe('SyncController', () => {
     it('rejects event with invalid progressPercent', async () => {
       req.body = { events: [makeEvent({ progressPercent: 150 })] }
       vi.mocked(prisma.syncEvent.findUnique).mockResolvedValue(null)
-      await controller.syncProgress(req as Request, res as Response, next)
+
+      controller.syncProgress(req as Request, res as Response, next)
+      await flushPromises()
+
       const call = vi.mocked(res.json).mock.calls[0][0]
       expect(call.data.results[0]).toEqual(expect.objectContaining({ status: 'rejected' }))
     })
@@ -96,7 +110,10 @@ describe('SyncController', () => {
     it('skips duplicate idempotency key', async () => {
       req.body = { events: [makeEvent()] }
       vi.mocked(prisma.syncEvent.findUnique).mockResolvedValue({ id: 'existing' } as any)
-      await controller.syncProgress(req as Request, res as Response, next)
+
+      controller.syncProgress(req as Request, res as Response, next)
+      await flushPromises()
+
       const call = vi.mocked(res.json).mock.calls[0][0]
       expect(call.data.results[0].status).toBe('skipped')
     })
@@ -105,7 +122,10 @@ describe('SyncController', () => {
       req.body = { events: [makeEvent({ syncVersion: 1 })] }
       vi.mocked(prisma.syncEvent.findUnique).mockResolvedValue(null)
       vi.mocked(prisma.syncEvent.findFirst).mockResolvedValue({ syncVersion: 5 } as any)
-      await controller.syncProgress(req as Request, res as Response, next)
+
+      controller.syncProgress(req as Request, res as Response, next)
+      await flushPromises()
+
       const call = vi.mocked(res.json).mock.calls[0][0]
       expect(call.data.results[0].status).toBe('skipped')
     })
@@ -115,7 +135,10 @@ describe('SyncController', () => {
       vi.mocked(prisma.syncEvent.findUnique).mockResolvedValue(null)
       vi.mocked(prisma.syncEvent.findFirst).mockResolvedValue(null)
       vi.mocked(prisma.syncEvent.create).mockResolvedValue({} as any)
-      await controller.syncProgress(req as Request, res as Response, next)
+
+      controller.syncProgress(req as Request, res as Response, next)
+      await flushPromises()
+
       expect(prisma.syncEvent.create).toHaveBeenCalled()
       const call = vi.mocked(res.json).mock.calls[0][0]
       expect(call.data.results[0].status).toBe('applied')
@@ -131,7 +154,10 @@ describe('SyncController', () => {
       vi.mocked(prisma.syncEvent.findUnique).mockResolvedValue(null)
       vi.mocked(prisma.syncEvent.findFirst).mockResolvedValue(null)
       vi.mocked(prisma.syncEvent.create).mockResolvedValue({} as any)
-      await controller.syncProgress(req as Request, res as Response, next)
+
+      controller.syncProgress(req as Request, res as Response, next)
+      await flushPromises()
+
       const { results } = vi.mocked(res.json).mock.calls[0][0].data
       expect(results[0].status).toBe('applied')
       expect(results[1].status).toBe('rejected')
@@ -142,7 +168,10 @@ describe('SyncController', () => {
     it('throws UnauthorizedError when user is missing', async () => {
       req.user = undefined
       req.body = { events: [makeCompletionEvent()] }
-      await controller.syncCompletions(req as Request, res as Response, next)
+
+      controller.syncCompletions(req as Request, res as Response, next)
+      await flushPromises()
+
       expect(next).toHaveBeenCalledWith(expect.objectContaining({ message: 'User ID not found' }))
     })
 
@@ -150,7 +179,10 @@ describe('SyncController', () => {
       req.body = { events: [makeCompletionEvent()] }
       vi.mocked(prisma.syncEvent.findUnique).mockResolvedValue(null)
       vi.mocked(prisma.module.findUnique).mockResolvedValue(null)
-      await controller.syncCompletions(req as Request, res as Response, next)
+
+      controller.syncCompletions(req as Request, res as Response, next)
+      await flushPromises()
+
       const call = vi.mocked(res.json).mock.calls[0][0]
       expect(call.data.results[0]).toEqual(expect.objectContaining({ status: 'rejected', reason: 'Module not found' }))
     })
@@ -158,7 +190,10 @@ describe('SyncController', () => {
     it('skips duplicate idempotency key', async () => {
       req.body = { events: [makeCompletionEvent()] }
       vi.mocked(prisma.syncEvent.findUnique).mockResolvedValue({ id: 'existing' } as any)
-      await controller.syncCompletions(req as Request, res as Response, next)
+
+      controller.syncCompletions(req as Request, res as Response, next)
+      await flushPromises()
+
       const call = vi.mocked(res.json).mock.calls[0][0]
       expect(call.data.results[0].status).toBe('skipped')
     })
@@ -169,7 +204,10 @@ describe('SyncController', () => {
       vi.mocked(prisma.module.findUnique).mockResolvedValue({ id: 'module-1' } as any)
       vi.mocked(prisma.completion.findUnique).mockResolvedValue({ score: 90 } as any)
       vi.mocked(prisma.syncEvent.create).mockResolvedValue({} as any)
-      await controller.syncCompletions(req as Request, res as Response, next)
+
+      controller.syncCompletions(req as Request, res as Response, next)
+      await flushPromises()
+
       const call = vi.mocked(res.json).mock.calls[0][0]
       expect(call.data.results[0].status).toBe('skipped')
       expect(prisma.completion.update).not.toHaveBeenCalled()
@@ -182,7 +220,10 @@ describe('SyncController', () => {
       vi.mocked(prisma.completion.findUnique).mockResolvedValue({ score: 70 } as any)
       vi.mocked(prisma.completion.update).mockResolvedValue({} as any)
       vi.mocked(prisma.syncEvent.create).mockResolvedValue({} as any)
-      await controller.syncCompletions(req as Request, res as Response, next)
+
+      controller.syncCompletions(req as Request, res as Response, next)
+      await flushPromises()
+
       expect(prisma.completion.update).toHaveBeenCalled()
       const call = vi.mocked(res.json).mock.calls[0][0]
       expect(call.data.results[0].status).toBe('applied')
@@ -195,7 +236,10 @@ describe('SyncController', () => {
       vi.mocked(prisma.completion.findUnique).mockResolvedValue(null)
       vi.mocked(prisma.completion.create).mockResolvedValue({} as any)
       vi.mocked(prisma.syncEvent.create).mockResolvedValue({} as any)
-      await controller.syncCompletions(req as Request, res as Response, next)
+
+      controller.syncCompletions(req as Request, res as Response, next)
+      await flushPromises()
+
       expect(prisma.completion.create).toHaveBeenCalled()
       const call = vi.mocked(res.json).mock.calls[0][0]
       expect(call.data.results[0].status).toBe('applied')
@@ -204,7 +248,10 @@ describe('SyncController', () => {
     it('rejects event with invalid score', async () => {
       req.body = { events: [makeCompletionEvent({ score: -5 })] }
       vi.mocked(prisma.syncEvent.findUnique).mockResolvedValue(null)
-      await controller.syncCompletions(req as Request, res as Response, next)
+
+      controller.syncCompletions(req as Request, res as Response, next)
+      await flushPromises()
+
       const call = vi.mocked(res.json).mock.calls[0][0]
       expect(call.data.results[0].status).toBe('rejected')
     })
