@@ -19,6 +19,7 @@ model User {
   completions     Completion[]
   credentials     Credential[]
   transactions    Transaction[]
+  syncEvents      SyncEvent[]
 
   @@map("users")
 }
@@ -82,6 +83,24 @@ enum Role {
 }
 
 
+
+model SyncEvent {
+  id              String   @id @default(uuid())
+  idempotencyKey  String   @unique
+  userId          String
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  deviceId        String
+  eventType       String   // progress, completion
+  payload         String   // JSON string
+  clientTimestamp DateTime
+  serverTimestamp DateTime @default(now())
+  syncVersion     Int
+  status          String   @default("applied") // applied, skipped, rejected
+  rejectionReason String?
+  createdAt       DateTime @default(now())
+
+  @@map("sync_events")
+}
 
 model WebhookEndpoint {
   id          String            @id @default(uuid())

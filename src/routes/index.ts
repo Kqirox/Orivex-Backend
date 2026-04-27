@@ -5,6 +5,7 @@ import moduleRoutes from './v1/modules.routes'
 import credentialRoutes from './v1/credentials.routes'
 import rewardRoutes from './v1/rewards.routes'
 import userRoutes from './v1/users.routes'
+import syncRoutes from './v1/sync.routes'
 
 const router: Router = Router()
 
@@ -18,5 +19,6 @@ router.use('/v1/modules', moduleRoutes)
 router.use('/v1/credentials', credentialRoutes)
 router.use('/v1/rewards', rewardRoutes)
 router.use('/v1/employer', employerRoutes)
+router.use('/v1/sync', syncRoutes)
 
 export default router
