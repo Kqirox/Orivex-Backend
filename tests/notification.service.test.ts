@@ -1,6 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { NotificationService } from '../src/services/notification.service'
-import * as admin from 'firebase-admin'
 
 // Use vi.hoisted to mock dependencies before they are imported by the service
 const { mockSendEachForMulticast } = vi.hoisted(() => ({

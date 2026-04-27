@@ -1,4 +1,7 @@
 import { Request, Response } from 'express'
+
+/** Sentinel score while a module is started but not yet completed (schema uses non-null Float). */
+const COMPLETION_IN_PROGRESS_SCORE = -1
 import { z } from 'zod'
 import { prisma } from '../config/database'
 import { NotificationService } from '../services/notification.service'
@@ -294,19 +297,20 @@ export const startModule = async (req: Request, res: Response) => {
     })
 
     if (existingCompletion) {
-      return res.status(400).json({ 
+      return res.status(400).json({
         message: 'Module already started or completed',
-        status: existingCompletion.score !== null ? 'completed' : 'in_progress'
+        status:
+          existingCompletion.score >= 0 ? 'completed' : 'in_progress',
       })
     }
 
-    // Create completion record with null score (in progress)
+    // Create completion record with sentinel score until quiz is submitted
     const completion = await prisma.completion.create({
       data: {
         userId: req.user.id,
         moduleId: id,
-        score: null // null indicates in progress
-      }
+        score: COMPLETION_IN_PROGRESS_SCORE,
+      },
     })
 
     res.status(201).json({
@@ -396,7 +400,7 @@ export const completeModule = async (req: Request, res: Response) => {
       return res.status(400).json({ message: 'Module must be started before completion' })
     }
 
-    if (completion.score !== null) {
+    if (completion.score >= 0) {
       return res.status(400).json({ message: 'Module already completed' })
     }
 
@@ -459,4 +463,4 @@ export const completeModule = async (req: Request, res: Response) => {
     console.error('Error completing module:', error)
     res.status(500).json({ message: 'Internal server error' })
   }
-}
+}

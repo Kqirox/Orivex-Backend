@@ -22,6 +22,10 @@ model User {
   deviceTokens    DeviceToken[]
   notificationPref NotificationPreference?
   notifications   NotificationLog[]
+  syncEvents      SyncEvent[]
+  referralCode    ReferralCode?
+  referrals       Referral[]     @relation("Referrer")
+  referredBy      Referral?      @relation("Referree")
 
   @@map("users")
 }
@@ -84,7 +88,53 @@ enum Role {
   INSTRUCTOR
 }
 
+model ReferralCode {
+  id        String     @id @default(uuid())
+  code      String     @unique
+  userId    String     @unique
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime   @default(now())
+  referrals Referral[]
 
+  @@map("referral_codes")
+}
+
+model Referral {
+  id            String       @id @default(uuid())
+  referrerId    String
+  referrer      User         @relation("Referrer", fields: [referrerId], references: [id], onDelete: Cascade)
+  referreeId    String       @unique
+  referree      User         @relation("Referree", fields: [referreeId], references: [id], onDelete: Cascade)
+  codeId        String
+  code          ReferralCode @relation(fields: [codeId], references: [id])
+  bonusPaid     Boolean      @default(false)
+  bonusAmount   Float?
+  bonusPaidAt   DateTime?
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+
+  @@map("referrals")
+}
+
+
+
+model SyncEvent {
+  id              String   @id @default(uuid())
+  idempotencyKey  String   @unique
+  userId          String
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  deviceId        String
+  eventType       String   // progress, completion
+  payload         String   // JSON string
+  clientTimestamp DateTime
+  serverTimestamp DateTime @default(now())
+  syncVersion     Int
+  status          String   @default("applied") // applied, skipped, rejected
+  rejectionReason String?
+  createdAt       DateTime @default(now())
+
+  @@map("sync_events")
+}
 
 model WebhookEndpoint {
   id          String            @id @default(uuid())
