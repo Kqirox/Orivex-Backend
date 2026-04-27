@@ -20,6 +20,9 @@ model User {
   credentials     Credential[]
   transactions    Transaction[]
   syncEvents      SyncEvent[]
+  referralCode    ReferralCode?
+  referrals       Referral[]     @relation("Referrer")
+  referredBy      Referral?      @relation("Referree")
 
   @@map("users")
 }
@@ -80,6 +83,34 @@ enum Role {
   ADMIN
   LEARNER
   INSTRUCTOR
+}
+
+model ReferralCode {
+  id        String     @id @default(uuid())
+  code      String     @unique
+  userId    String     @unique
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime   @default(now())
+  referrals Referral[]
+
+  @@map("referral_codes")
+}
+
+model Referral {
+  id            String       @id @default(uuid())
+  referrerId    String
+  referrer      User         @relation("Referrer", fields: [referrerId], references: [id], onDelete: Cascade)
+  referreeId    String       @unique
+  referree      User         @relation("Referree", fields: [referreeId], references: [id], onDelete: Cascade)
+  codeId        String
+  code          ReferralCode @relation(fields: [codeId], references: [id])
+  bonusPaid     Boolean      @default(false)
+  bonusAmount   Float?
+  bonusPaidAt   DateTime?
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+
+  @@map("referrals")
 }
 
 
