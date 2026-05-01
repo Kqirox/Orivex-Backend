@@ -3,7 +3,7 @@ import { SyncController } from '../../controllers/sync.controller'
 import { authenticate } from '../../middleware/auth.middleware'
 import { authenticatedLimiter } from '../../middleware/rate-limit.middleware'
 
-const router = Router()
+const router: Router = Router()
 const syncController = new SyncController()
 
 /**

@@ -2,7 +2,7 @@ import { Router } from 'express'
 import { authenticate, optionalAuthenticate } from '../../middleware/auth.middleware'
 import { listModules, getModuleById, startModule, completeModule } from '../../controllers/module.controller'
 
-const router = Router()
+const router: Router = Router()
 
 // GET /modules - List modules with filters and pagination
 // Optional authentication - includes user progress if authenticated

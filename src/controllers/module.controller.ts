@@ -1,6 +1,12 @@
 import { Request, Response } from 'express'
+
+/** Sentinel score while a module is started but not yet completed (schema uses non-null Float). */
+const COMPLETION_IN_PROGRESS_SCORE = -1
 import { z } from 'zod'
 import { prisma } from '../config/database'
+import { NotificationService } from '../services/notification.service'
+
+const notificationService = new NotificationService()
 
 // Query parameter schemas for validation
 const listModulesSchema = z.object({
@@ -291,19 +297,20 @@ export const startModule = async (req: Request, res: Response) => {
     })
 
     if (existingCompletion) {
-      return res.status(400).json({ 
+      return res.status(400).json({
         message: 'Module already started or completed',
-        status: existingCompletion.score !== null ? 'completed' : 'in_progress'
+        status:
+          existingCompletion.score >= 0 ? 'completed' : 'in_progress',
       })
     }
 
-    // Create completion record with null score (in progress)
+    // Create completion record with sentinel score until quiz is submitted
     const completion = await prisma.completion.create({
       data: {
         userId: req.user.id,
         moduleId: id,
-        score: null // null indicates in progress
-      }
+        score: COMPLETION_IN_PROGRESS_SCORE,
+      },
     })
 
     res.status(201).json({
@@ -393,7 +400,7 @@ export const completeModule = async (req: Request, res: Response) => {
       return res.status(400).json({ message: 'Module must be started before completion' })
     }
 
-    if (completion.score !== null) {
+    if (completion.score >= 0) {
       return res.status(400).json({ message: 'Module already completed' })
     }
 
@@ -433,6 +440,16 @@ export const completeModule = async (req: Request, res: Response) => {
       })
     }
 
+    // Fire push notification for quiz pass/fail (non-blocking)
+    notificationService.queueNotification(
+      req.user.id,
+      'quizPassFail',
+      isEligibleForReward ? 'Quiz Passed!' : 'Quiz Completed',
+      isEligibleForReward
+        ? `Great job! You scored ${score}% on "${module.title}" and earned ${module.reward} XLM.`
+        : `You scored ${score}% on "${module.title}". Keep practicing to earn rewards!`
+    ).catch(err => console.error('[Notifications] Quiz notification error:', err))
+
     res.json({
       message: 'Module completed successfully',
       score,
@@ -446,4 +463,4 @@ export const completeModule = async (req: Request, res: Response) => {
     console.error('Error completing module:', error)
     res.status(500).json({ message: 'Internal server error' })
   }
-}
+}

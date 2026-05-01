@@ -70,7 +70,7 @@ function locationForCandidate(email: string) {
 type CandidateRecord = {
   id: string
   email: string
-  name: string
+  username: string
   createdAt: Date
   completions: Array<{
     score: number
@@ -123,7 +123,7 @@ function profileFromCandidate(candidate: CandidateRecord) {
 
   return {
     id: candidate.id,
-    name: candidate.name,
+    name: candidate.username,
     location: locationForCandidate(candidate.email),
     joinedAt: candidate.createdAt,
     skills: derivedSkills(candidate),
@@ -178,7 +178,7 @@ export const searchTalent = async (req: Request, res: Response) => {
       ...(search
         ? {
             OR: [
-              { name: { contains: search, mode: 'insensitive' } },
+              { username: { contains: search, mode: 'insensitive' } },
               { email: { contains: search, mode: 'insensitive' } },
             ],
           }
@@ -358,7 +358,7 @@ export const contactCandidate = async (req: Request, res: Response) => {
     select: {
       id: true,
       email: true,
-      name: true,
+      username: true,
     },
   })
 
