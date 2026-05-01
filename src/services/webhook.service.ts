@@ -1,9 +1,8 @@
-import { PrismaClient, WebhookDelivery, WebhookEndpoint } from '@prisma/client'
+import type { WebhookDelivery, WebhookEndpoint } from '@prisma/client'
+import prisma from '../config/database'
 import { WebhookEndpointCreate, WebhookEventType, WebhookPayload } from '../types/webhook.types'
 
 import crypto from 'crypto'
-
-const prisma = new PrismaClient()
 
 export class WebhookService {
     /**
@@ -173,7 +172,7 @@ export class WebhookService {
             take: 10,
         })
 
-        const failureCount = recentDeliveries.filter(d => d.status === 'failed').length
+        const failureCount = recentDeliveries.filter((d: WebhookDelivery) => d.status === 'failed').length
 
         if (failureCount >= 10) {
             await prisma.webhookEndpoint.update({

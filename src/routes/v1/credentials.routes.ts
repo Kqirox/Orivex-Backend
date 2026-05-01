@@ -4,7 +4,7 @@ import { CredentialController } from '../../controllers/credential.controller'
 import { validate, commonSchemas } from '../../middleware/validation.middleware'
 import { z } from 'zod'
 
-const router = Router()
+const router: Router = Router()
 const credentialController = new CredentialController()
 
 // Validation schemas

@@ -162,7 +162,7 @@ export class UserController {
       await this.updateUserPassword(userId, newPassword)
 
       res.json({ message: 'Password updated successfully' })
-    } catch {
+    } catch (error: unknown) {
       console.error('Error changing password:', error)
       res.status(500).json({ error: 'Internal server error' })
     }

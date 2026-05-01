@@ -96,7 +96,7 @@ export class CredentialController {
           user: {
             select: {
               id: true,
-              name: true,
+              username: true,
               email: true,
             },
           },
@@ -178,7 +178,7 @@ export class CredentialController {
           user: {
             select: {
               id: true,
-              name: true,
+              username: true,
               email: true,
             },
           },
@@ -209,7 +209,7 @@ export class CredentialController {
         data: {
           id: credential.id,
           userId: credential.userId,
-          holderName: credential.user.name,
+          holderName: credential.user.username,
           moduleId: credential.moduleId,
           moduleName: credential.module.title,
           moduleDescription: credential.module.description,
@@ -260,7 +260,7 @@ export class CredentialController {
           user: {
             select: {
               id: true,
-              name: true,
+              username: true,
             },
           },
           module: {
@@ -282,7 +282,7 @@ export class CredentialController {
             user: {
               select: {
                 id: true,
-                name: true,
+                username: true,
               },
             },
             module: {
@@ -307,7 +307,7 @@ export class CredentialController {
           valid: true,
           credential: {
             id: credential.id,
-            holderName: credential.user.name,
+            holderName: credential.user.username,
             moduleName: credential.module.title,
             moduleCategory: credential.module.category,
             moduleDifficulty: credential.module.difficulty,

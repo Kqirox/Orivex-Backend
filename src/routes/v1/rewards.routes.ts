@@ -2,7 +2,7 @@ import { Router } from 'express'
 import { RewardController } from '../../controllers/reward.controller'
 import { authenticate } from '../../middleware/auth.middleware'
 
-const router = Router()
+const router: Router = Router()
 const rewardController = new RewardController()
 
 /**

@@ -3,7 +3,7 @@ import { contactCandidate, getCandidateProfile, searchTalent } from '../../contr
 import { authenticate, authorize } from '../../middleware/auth.middleware'
 import { employerLimiter } from '../../middleware/rate-limit.middleware'
 
-const router = Router()
+const router: Router = Router()
 
 router.use(authenticate, authorize('employer'), employerLimiter)
 

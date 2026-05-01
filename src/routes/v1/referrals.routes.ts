@@ -2,7 +2,7 @@ import { Router } from 'express'
 import { ReferralController } from '../../controllers/referral.controller'
 import { authenticate } from '../../middleware/auth.middleware'
 
-const router = Router()
+const router: Router = Router()
 const referralController = new ReferralController()
 
 /**

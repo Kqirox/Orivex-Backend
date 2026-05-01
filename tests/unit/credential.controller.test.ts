@@ -56,7 +56,7 @@ describe('CredentialController', () => {
           issuedAt: new Date('2024-01-01'),
           user: {
             id: 'user-1',
-            name: 'John Doe',
+            username: 'John Doe',
             email: 'john@example.com',
           },
           module: {
@@ -224,7 +224,7 @@ describe('CredentialController', () => {
         issuedAt: new Date('2024-01-01'),
         user: {
           id: 'user-1',
-          name: 'John Doe',
+          username: 'John Doe',
           email: 'john@example.com',
         },
         module: {
@@ -288,7 +288,7 @@ describe('CredentialController', () => {
         moduleId: 'module-1',
         onChainId: 'chain-1',
         issuedAt: new Date(),
-        user: { id: 'user-2', name: 'Jane Doe', email: 'jane@example.com' },
+        user: { id: 'user-2', username: 'Jane Doe', email: 'jane@example.com' },
         module: {
           id: 'module-1',
           title: 'Test',
@@ -343,7 +343,7 @@ describe('CredentialController', () => {
         issuedAt: new Date('2024-01-01'),
         user: {
           id: 'user-1',
-          name: 'John Doe',
+          username: 'John Doe',
         },
         module: {
           id: 'module-1',
@@ -390,7 +390,7 @@ describe('CredentialController', () => {
         issuedAt: new Date('2024-01-01'),
         user: {
           id: 'user-1',
-          name: 'John Doe',
+          username: 'John Doe',
         },
         module: {
           id: 'module-1',
@@ -452,7 +452,7 @@ describe('CredentialController', () => {
         moduleId: 'module-1',
         onChainId: 'chain-1',
         issuedAt: new Date(),
-        user: { id: 'user-1', name: 'John Doe' },
+        user: { id: 'user-1', username: 'John Doe' },
         module: {
           id: 'module-1',
           title: 'Test',

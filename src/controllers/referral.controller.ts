@@ -143,10 +143,17 @@ export class ReferralController {
       },
     })
 
+    type ReferralRow = (typeof referrals)[number]
+
     const totalReferrals = referrals.length
-    const activeReferrals = referrals.filter((r) => r.referree.completions.length > 0).length
-    const paidBonuses = referrals.filter((r) => r.bonusPaid)
-    const earnedBonuses = paidBonuses.reduce((sum, r) => sum + (r.bonusAmount ?? 0), 0)
+    const activeReferrals = referrals.filter(
+      (r: ReferralRow) => r.referree.completions.length > 0,
+    ).length
+    const paidBonuses = referrals.filter((r: ReferralRow) => r.bonusPaid)
+    const earnedBonuses = paidBonuses.reduce(
+      (sum: number, r: ReferralRow) => sum + (r.bonusAmount ?? 0),
+      0,
+    )
 
     res.status(200).json({
       success: true,

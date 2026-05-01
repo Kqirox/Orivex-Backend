@@ -39,7 +39,7 @@ describe('EmployerController', () => {
       {
         id: 'cand-1',
         email: 'alice.learner+seed@learnault.dev',
-        name: 'Alice Learner',
+        username: 'Alice Learner',
         createdAt: new Date('2026-01-01T00:00:00Z'),
         completions: [
           {
@@ -70,7 +70,7 @@ describe('EmployerController', () => {
       {
         id: 'cand-2',
         email: 'bob.learner+seed@learnault.dev',
-        name: 'Bob Learner',
+        username: 'Bob Learner',
         createdAt: new Date('2026-01-01T00:00:00Z'),
         completions: [
           {
@@ -119,7 +119,7 @@ describe('EmployerController', () => {
     ;(prisma.user.findUnique as any).mockResolvedValue({
       id: 'cand-1',
       email: 'alice.learner+seed@learnault.dev',
-      name: 'Alice Learner',
+      username: 'Alice Learner',
       createdAt: new Date('2026-01-01T00:00:00Z'),
       completions: [
         {
@@ -196,7 +196,7 @@ describe('EmployerController', () => {
     ;(prisma.user.findUnique as any).mockResolvedValue({
       id: 'cand-1',
       email: 'alice.learner+seed@learnault.dev',
-      name: 'Alice Learner',
+      username: 'Alice Learner',
     })
     ;(prisma.webhookEndpoint.upsert as any).mockResolvedValue({ id: 'system-employer-outreach-log' })
     ;(prisma.webhookDelivery.create as any).mockResolvedValue({
