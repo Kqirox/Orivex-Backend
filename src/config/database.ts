@@ -24,6 +24,7 @@ function createPrismaClient(): PrismaClient {
   }
 
   const adapter = new PrismaPg(pool)
+
   return new PrismaClient({ adapter })
 }
 
