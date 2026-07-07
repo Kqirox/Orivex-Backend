@@ -142,13 +142,13 @@ We offer bug bounties for qualifying security vulnerabilities. The bounty amount
    - Keep recovery phrases offline and secure
 
 2. **Account Protection**
-   - Verify email confirmations come from @orivex.io
+   - Verify email confirmations come from @learnault.io
    - Be cautious of phishing attempts
    - Log out from shared devices
    - Monitor your wallet for unauthorized transactions
 
 3. **Safe Learning**
-   - Only access Orivex through official channels
+   - Only access Learnault through official channels
    - Report suspicious modules or content
    - Be wary of users asking for personal information
 
@@ -201,7 +201,7 @@ Our Soroban smart contracts implement:
 
 We ask that security researchers follow these guidelines:
 
-1. **Report Privately**: Send details to security@learnault.io first
+1. **Report Privately**: Send details to security@orivex.io first
 2. **Give Us Time**: Allow reasonable time to fix before public disclosure
 3. **Make Good Faith Efforts**: Avoid privacy violations, data destruction, or service interruption
 4. **Provide Details**: Quality reports help us fix faster
