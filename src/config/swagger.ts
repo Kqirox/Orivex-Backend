@@ -5,12 +5,12 @@ const options: swaggerJsdoc.Options = {
   definition: {
     openapi: '3.0.0',
     info: {
-      title: 'Learnault API Documentation',
+      title: 'Orivex API Documentation',
       version: '1.0.0',
-      description: 'Comprehensive API documentation for Learnault - a decentralized learn-to-earn platform on Stellar',
+      description: 'Comprehensive API documentation for Orivex - a decentralized learn-to-earn platform on Stellar',
       contact: {
-        name: 'Learnault Contributors',
-        url: 'https://github.com/learnault/learnault',
+        name: 'Orivex-Backend Contributors',
+        url: 'https://github.com/Kqirox/Orivex-Backend',
       },
     },
     servers: [
