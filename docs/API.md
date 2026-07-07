@@ -1,10 +1,10 @@
-# Learnault API Documentation
+# Orivex API Documentation
 
 ## Overview
 
-The Learnault API provides endpoints for user management, learning modules, rewards, and credential verification. The API follows RESTful principles and returns JSON responses.
+The Orivex API provides endpoints for user management, learning modules, rewards, and credential verification. The API follows RESTful principles and returns JSON responses.
 
-**Base URL:** `https://api.learnault.io/v1` (production) or `http://localhost:3001/v1` (development)
+**Base URL:** `https://api.orivex.io/v1` (production) or `http://localhost:3001/v1` (development)
 
 ## Authentication
 
