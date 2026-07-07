@@ -134,7 +134,7 @@ NODE_ENV=development
 
 ### Production
 ```env
-DATABASE_URL="postgresql://user:password@host:5432/learnault_prod?schema=public&sslmode=require"
+DATABASE_URL="postgresql://user:password@host:5432/orivex_prod?schema=public&sslmode=require"
 NODE_ENV=production
 ```
 
