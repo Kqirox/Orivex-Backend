@@ -273,7 +273,7 @@ For **critical security emergencies** (active attack, compromised systems, etc.)
 | **Email**           | emergency@orivex.io | Monitored 24/7 |
 | **Discord**         | @security-lead (ping)  | Business hours |
 
-For non-emergencies, please use security@learnault.io.
+For non-emergencies, please use security@orivex.io.
 
 _Last updated: February 2026_
 
