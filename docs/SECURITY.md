@@ -1,8 +1,8 @@
-# Security Policy for Learnault
+# Security Policy for Orivex
 
 ## Overview
 
-Learnault is committed to protecting the security and integrity of our platform, users, and community. We take security vulnerabilities seriously and appreciate the efforts of security researchers and community members who help us maintain a safe environment.
+Orivex is committed to protecting the security and integrity of our platform, users, and community. We take security vulnerabilities seriously and appreciate the efforts of security researchers and community members who help us maintain a safe environment.
 
 This document outlines our security practices, how to report vulnerabilities, and what to expect when you report a security issue.
 
@@ -10,7 +10,7 @@ This document outlines our security practices, how to report vulnerabilities, an
 
 ## Supported Versions
 
-We currently support the following versions of Learnault with security updates:
+We currently support the following versions of Orivex with security updates:
 
 | Version     | Supported | Status                                       |
 | :---------- | :-------- | :------------------------------------------- |
