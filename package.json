@@ -14,7 +14,7 @@
   "homepage": "https://github.com/learnault/learnault",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/Kqirox/Orivex-Backend.git"
+    "url": "git+https://github.com/learnault/learnault.git"
   },
   "license": "MIT",
   "author": "Learnault Contributors",
@@ -89,6 +89,6 @@
     "test": "tests"
   },
   "bugs": {
-    "url": "https://github.com/learnault/learnault/issues"
+    "url": "https://github.com/Kqirox/Orivex-Backend/issues"
   }
 }
