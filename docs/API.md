@@ -347,7 +347,7 @@ GET /v1/credentials
       "moduleTitle": "Understanding Stablecoins",
       "issuedAt": "2024-01-15T10:30:00Z",
       "onChainId": "0x123...",
-      "verifiableUrl": "https://verify.orivex.io/cred_789"
+      "verifiableUrl": "https://verify.learnault.io/cred_789"
     }
   ]
 }
@@ -372,7 +372,7 @@ GET /v1/credentials/verify/:onChainId
       "moduleId": "mod_456",
       "moduleTitle": "Understanding Stablecoins",
       "issuedAt": "2024-01-15T10:30:00Z",
-      "issuer": "Orivex"
+      "issuer": "Learnault"
     }
   }
 }
@@ -475,6 +475,6 @@ See [Webhook Documentation](./WEBHOOKS.md) for details.
 
 For API support, please:
 
-- Check our [API status page](https://status.learnault.io)
+- Check our [API status page](https://status.orivex.io)
 - Join our [Discord](https://discord.gg) #api channel
-- Email: learnault@toneflix.net
+- Email: orivex@toneflix.net
