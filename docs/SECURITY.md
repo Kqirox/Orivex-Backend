@@ -201,7 +201,7 @@ Our Soroban smart contracts implement:
 
 We ask that security researchers follow these guidelines:
 
-1. **Report Privately**: Send details to security@orivex.io first
+1. **Report Privately**: Send details to security@learnault.io first
 2. **Give Us Time**: Allow reasonable time to fix before public disclosure
 3. **Make Good Faith Efforts**: Avoid privacy violations, data destruction, or service interruption
 4. **Provide Details**: Quality reports help us fix faster
@@ -269,8 +269,8 @@ For **critical security emergencies** (active attack, compromised systems, etc.)
 | Method              | Contact                | Availability   |
 | :------------------ | :--------------------- | :------------- |
 | **Emergency Phone** | +1 (555) 123-4567      | 24/7           |
-| **Signal**          | @learnault.123         | 24/7           |
-| **Email**           | emergency@learnault.io | Monitored 24/7 |
+| **Signal**          | @orivex.123         | 24/7           |
+| **Email**           | emergency@orivex.io | Monitored 24/7 |
 | **Discord**         | @security-lead (ping)  | Business hours |
 
 For non-emergencies, please use security@learnault.io.
