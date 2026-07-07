@@ -1,6 +1,6 @@
-# Contributing to Orivex
+# Contributing to Learnault
 
-First off, thank you for considering contributing to Orivex! It's people like you that make Orivex such a great tool for education and financial inclusion.
+First off, thank you for considering contributing to Learnault! It's people like you that make Learnault such a great tool for education and financial inclusion.
 
 ## Code of Conduct
 
@@ -46,8 +46,8 @@ Unsure where to start? Look for issues labeled `good-first-issue` or `help-wante
 ### 1. Fork & Clone
 
 ```bash
-git clone https://github.com/toneflix/learnault.git
-cd learnault
+git clone https://github.com/Kqirox/Orivex-Backend.git
+cd Orivex-Backend
 ```
 
 ### 2. Install Dependencies
