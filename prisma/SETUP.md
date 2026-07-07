@@ -143,10 +143,10 @@ NODE_ENV=production
 ### Using Docker
 
 ```bash
-docker run --name learnault-postgres \
+docker run --name orivex-postgres \
   -e POSTGRES_USER=postgres \
   -e POSTGRES_PASSWORD=postgres \
-  -e POSTGRES_DB=learnault_dev \
+  -e POSTGRES_DB=orivex_dev \
   -p 5432:5432 \
   -d postgres:15
 ```
