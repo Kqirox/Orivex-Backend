@@ -59,7 +59,7 @@ For detailed architecture, see [ARCHITECTURE.md](./docs/ARCHITECTURE.md).
 ```bash
 # Clone the repository
 git clone https://github.com/Kqirox/Orivex-Backend.git
-cd learnault-api
+cd Orivex-Backend
 
 # Install dependencies
 pnpm install
