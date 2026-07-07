@@ -151,7 +151,7 @@ The API will be live at `http://localhost:<PORT>/api/v1`. Swagger UI is mounted 
 
 ## 🌐 API Surface (skim)
 
-```
+```text
 POST   /api/v1/auth/register         sign up
 POST   /api/v1/auth/login            sign in
 GET    /api/v1/modules               list catalogue
