@@ -64,9 +64,9 @@ The following assets are in scope for security reporting:
 
 **Core Platform:**
 
-- Smart contracts (`https://github.com/Kqirox/Orivex-Contracts/`)
-- Backend API (`https://github.com/Kqirox/Orivex-Backend/`)
-- Frontend application (`https://github.com/Kqirox/Orivex-Backend/`)
+- Smart contracts (`https://github.com/learnault/contracts/`)
+- Backend API (`https://github.com/learnault/api/`)
+- Frontend application (`https://github.com/learnault/learnault/`)
 - Authentication and authorization systems
 - Reward distribution mechanisms
 - Wallet integration
@@ -83,7 +83,7 @@ The following assets are in scope for security reporting:
 The following are generally out of scope:
 
 - Issues requiring physical access to user devices
-- Social engineering of Learnault team members
+- Social engineering of Orivex team members
 - Denial of service attacks (report these, but we handle separately)
 - Theoretical vulnerabilities without proof of concept
 - Issues in dependencies that are already reported upstream
