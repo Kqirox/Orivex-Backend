@@ -143,10 +143,10 @@ NODE_ENV=production
 ### Using Docker
 
 ```bash
-docker run --name orivex-postgres \
+docker run --name learnault-postgres \
   -e POSTGRES_USER=postgres \
   -e POSTGRES_PASSWORD=postgres \
-  -e POSTGRES_DB=orivex_dev \
+  -e POSTGRES_DB=learnault_dev \
   -p 5432:5432 \
   -d postgres:15
 ```
@@ -156,14 +156,14 @@ docker run --name orivex-postgres \
 ```bash
 brew install postgresql
 brew services start postgresql
-psql -U postgres -c "CREATE DATABASE learnault_dev;"
+psql -U postgres -c "CREATE DATABASE orivex_dev;"
 ```
 
 ### Using APT (Ubuntu/Debian)
 
 ```bash
 sudo apt-get install postgresql postgresql-contrib
-sudo -u postgres psql -c "CREATE DATABASE learnault_dev;"
+sudo -u postgres psql -c "CREATE DATABASE orivex_dev;"
 ```
 
 ## Testing the Connection
