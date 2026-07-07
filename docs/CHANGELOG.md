@@ -7,9 +7,9 @@ the project adheres to [Semantic Versioning](https://semver.org/).
 ## [Unreleased]
 
 ### Changed
-- Project rebranded from *Learnault* to *Orivex* (`Orivex-Backend`).
+- Project finalised under the `Orivex-Backend` identity.
 - All public URLs, webhooks, transaction memos, HMAC headers, and emails moved
-  off `learnault.*` and onto `orivex.*` namespaces.
+  to the unified `orivex.*` namespace.
 
 ### Removed
 - Stale debug artifacts (`lint_results*.txt`, `server_error*.txt`, `lint_output.json`)

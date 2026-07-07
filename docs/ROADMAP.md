@@ -5,7 +5,7 @@ service. It is intentionally short — execution happens in feature branches.
 
 ## Now (current quarter)
 
-- ✅ Rebrand to `orivex-backend`, retire `learnault-*` namespaces.
+- ✅ Consolidate identity under `orivex-backend`; retire all legacy namespace aliases.
 - ✅ Drop the legacy debug artifacts and tighten `.gitignore`.
 - ✅ Cut over documentation to the `orivex.io` / `Kqirox/Orivex-Backend`
   families of URLs.
