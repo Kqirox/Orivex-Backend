@@ -64,9 +64,9 @@ The following assets are in scope for security reporting:
 
 **Core Platform:**
 
-- Smart contracts (`https://github.com/learnault/contracts/`)
-- Backend API (`https://github.com/learnault/api/`)
-- Frontend application (`https://github.com/learnault/learnault/`)
+- Smart contracts (`https://github.com/Kqirox/Orivex-Contracts/`)
+- Backend API (`https://github.com/Kqirox/Orivex-Backend/`)
+- Frontend application (`https://github.com/Kqirox/Orivex-Backend/`)
 - Authentication and authorization systems
 - Reward distribution mechanisms
 - Wallet integration
