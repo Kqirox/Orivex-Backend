@@ -201,7 +201,7 @@ Our Soroban smart contracts implement:
 
 We ask that security researchers follow these guidelines:
 
-1. **Report Privately**: Send details to security@learnault.io first
+1. **Report Privately**: Send details to security@orivex.io first
 2. **Give Us Time**: Allow reasonable time to fix before public disclosure
 3. **Make Good Faith Efforts**: Avoid privacy violations, data destruction, or service interruption
 4. **Provide Details**: Quality reports help us fix faster
