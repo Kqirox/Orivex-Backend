@@ -35,43 +35,43 @@ const DIFFICULTY_MULTIPLIER: Record<string, number> = {
 const seedUserFixtures: SeedUser[] = [
   {
     id: 'seed-user-admin-ada',
-    email: 'ada.admin+seed@learnault.dev',
+    email: 'ada.admin+seed@orivex.dev',
     name: 'Ada Admin',
     walletAddress: 'GD6QK3H5MYYXQUDMVDGLDZ4E2IWXQ7N5SLW7PZBLW4D5YV3V2NFH8A1A',
   },
   {
     id: 'seed-user-learner-alice',
-    email: 'alice.learner+seed@learnault.dev',
+    email: 'alice.learner+seed@orivex.dev',
     name: 'Alice Learner',
     walletAddress: 'GBUQWP3BOUZX34ULNQG23RQ6F4BFSRJ4HBSNF63YLIXLQ5EDLF274Y6C',
   },
   {
     id: 'seed-user-learner-bob',
-    email: 'bob.learner+seed@learnault.dev',
+    email: 'bob.learner+seed@orivex.dev',
     name: 'Bob Learner',
     walletAddress: 'GB7YLLICSMNYWJ46NWYCBTGXD54FPPWFY3YQYBFJFTQ6B2N3WHAL5V4K',
   },
   {
     id: 'seed-user-learner-carla',
-    email: 'carla.learner+seed@learnault.dev',
+    email: 'carla.learner+seed@orivex.dev',
     name: 'Carla Learner',
     walletAddress: 'GA5N2IBQ2J5KVSBBR6K7D6JQ3Y7L46BP3I7WNIPXQ2XH2WQOTJXK5C2Z',
   },
   {
     id: 'seed-user-learner-deepak',
-    email: 'deepak.learner+seed@learnault.dev',
+    email: 'deepak.learner+seed@orivex.dev',
     name: 'Deepak Learner',
     walletAddress: 'GDVXG4D7WQ3WWT3S3Q6L2J5KLC2TSGBYHYQ4M4U7QWEK3J75VYLPQ9U2',
   },
   {
     id: 'seed-user-employer-acme',
-    email: 'acme.employer+seed@learnault.dev',
+    email: 'acme.employer+seed@orivex.dev',
     name: 'Acme Talent Team',
     walletAddress: null,
   },
   {
     id: 'seed-user-employer-globex',
-    email: 'globex.employer+seed@learnault.dev',
+    email: 'globex.employer+seed@orivex.dev',
     name: 'Globex Hiring Ops',
     walletAddress: null,
   },
@@ -362,7 +362,7 @@ async function seedWebhookData() {
   await prisma.webhookEndpoint.upsert({
     where: { id: endpointId },
     update: {
-      url: 'https://example.com/webhooks/learnault',
+      url: 'https://example.com/webhooks/orivex',
       secret: 'seed_webhook_secret',
       description: 'Development webhook endpoint',
       isActive: true,
@@ -370,7 +370,7 @@ async function seedWebhookData() {
     },
     create: {
       id: endpointId,
-      url: 'https://example.com/webhooks/learnault',
+      url: 'https://example.com/webhooks/orivex',
       secret: 'seed_webhook_secret',
       description: 'Development webhook endpoint',
       isActive: true,
