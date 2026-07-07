@@ -369,14 +369,14 @@ export const contactCandidate = async (req: Request, res: Response) => {
   const outreachEndpoint = await prisma.webhookEndpoint.upsert({
     where: { id: 'system-employer-outreach-log' },
     update: {
-      url: 'https://internal.learnault/employer-outreach',
+      url: 'https://internal.orivex/employer-outreach',
       description: 'System log endpoint for employer candidate outreach attempts',
       isActive: true,
       events: 'employer.contact_attempt',
     },
     create: {
       id: 'system-employer-outreach-log',
-      url: 'https://internal.learnault/employer-outreach',
+      url: 'https://internal.orivex/employer-outreach',
       description: 'System log endpoint for employer candidate outreach attempts',
       secret: null,
       isActive: true,
