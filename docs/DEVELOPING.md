@@ -36,7 +36,7 @@ pnpm dev
 
 ## Project layout
 
-```
+```plaintext
 src/
 ├── app.ts                 # Express bootstrap
 ├── server.ts              # listen entry

@@ -12,7 +12,7 @@ versioned JSON API under `/api/v1` and is responsible for:
 
 ## High-level
 
-```
+```plaintext
                 ┌────────────────────────────┐
                 │   Orivex PWA (mobile web)  │
                 └──────────────┬─────────────┘
@@ -54,7 +54,7 @@ versioned JSON API under `/api/v1` and is responsible for:
 
 ## Deployment topology
 
-```
+```plaintext
 Load balancer
    └── Orivex-Backend (stateless; ≥ 2 replicas)
         ├── Postgres primary (HA, automated backups)
