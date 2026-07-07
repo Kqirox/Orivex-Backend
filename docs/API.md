@@ -347,7 +347,7 @@ GET /v1/credentials
       "moduleTitle": "Understanding Stablecoins",
       "issuedAt": "2024-01-15T10:30:00Z",
       "onChainId": "0x123...",
-      "verifiableUrl": "https://verify.learnault.io/cred_789"
+      "verifiableUrl": "https://verify.orivex.io/cred_789"
     }
   ]
 }
@@ -372,7 +372,7 @@ GET /v1/credentials/verify/:onChainId
       "moduleId": "mod_456",
       "moduleTitle": "Understanding Stablecoins",
       "issuedAt": "2024-01-15T10:30:00Z",
-      "issuer": "Learnault"
+      "issuer": "Orivex"
     }
   }
 }
