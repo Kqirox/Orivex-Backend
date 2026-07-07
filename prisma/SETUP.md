@@ -1,6 +1,6 @@
 # Prisma Setup Guide
 
-This directory contains the Prisma ORM configuration for the Learnault API.
+This directory contains the Prisma ORM configuration for the Orivex API.
 
 ## Quick Start
 
