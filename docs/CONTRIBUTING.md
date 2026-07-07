@@ -1,6 +1,6 @@
-# Contributing to Learnault
+# Contributing to Orivex
 
-First off, thank you for considering contributing to Learnault! It's people like you that make Learnault such a great tool for education and financial inclusion.
+First off, thank you for considering contributing to Orivex! It's people like you that make Orivex such a great tool for education and financial inclusion.
 
 ## Code of Conduct
 
