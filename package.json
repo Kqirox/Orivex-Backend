@@ -1,5 +1,5 @@
 {
-  "name": "learnault-api",
+  "name": "orivex-backend",
   "version": "0.1.0",
   "private": true,
   "description": "Decentralized learn-to-earn platform on Stellar",
@@ -11,13 +11,13 @@
     "learn-to-earn",
     "soroban"
   ],
-  "homepage": "https://github.com/learnault/learnault",
+  "homepage": "https://github.com/Kqirox/Orivex-Backend",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/learnault/learnault.git"
+    "url": "git+https://github.com/Kqirox/Orivex-Backend.git"
   },
   "license": "MIT",
-  "author": "Learnault Contributors",
+  "author": "Orivex-Backend Contributors",
   "scripts": {
     "dev": "nodemon",
     "build": "tsc",
@@ -89,6 +89,6 @@
     "test": "tests"
   },
   "bugs": {
-    "url": "https://github.com/learnault/learnault/issues"
+    "url": "https://github.com/Kqirox/Orivex-Backend/issues"
   }
 }

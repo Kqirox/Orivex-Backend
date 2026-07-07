@@ -1,6 +1,6 @@
 # Prisma Setup Guide
 
-This directory contains the Prisma ORM configuration for the Learnault API.
+This directory contains the Prisma ORM configuration for the Orivex API.
 
 ## Quick Start
 
@@ -22,7 +22,7 @@ cp .env.example .env
 
 Example for local PostgreSQL:
 ```env
-DATABASE_URL="postgresql://postgres:postgres@localhost:5432/learnault_dev?schema=public"
+DATABASE_URL="postgresql://postgres:postgres@localhost:5432/orivex_dev?schema=public"
 ```
 
 ### 3. Run Migrations
@@ -128,13 +128,13 @@ prisma format
 
 ### Development
 ```env
-DATABASE_URL="postgresql://postgres:postgres@localhost:5432/learnault_dev?schema=public"
+DATABASE_URL="postgresql://postgres:postgres@localhost:5432/orivex_dev?schema=public"
 NODE_ENV=development
 ```
 
 ### Production
 ```env
-DATABASE_URL="postgresql://user:password@host:5432/learnault_prod?schema=public&sslmode=require"
+DATABASE_URL="postgresql://user:password@host:5432/orivex_prod?schema=public&sslmode=require"
 NODE_ENV=production
 ```
 
@@ -143,10 +143,10 @@ NODE_ENV=production
 ### Using Docker
 
 ```bash
-docker run --name learnault-postgres \
+docker run --name orivex-postgres \
   -e POSTGRES_USER=postgres \
   -e POSTGRES_PASSWORD=postgres \
-  -e POSTGRES_DB=learnault_dev \
+  -e POSTGRES_DB=orivex_dev \
   -p 5432:5432 \
   -d postgres:15
 ```
@@ -156,14 +156,14 @@ docker run --name learnault-postgres \
 ```bash
 brew install postgresql
 brew services start postgresql
-psql -U postgres -c "CREATE DATABASE learnault_dev;"
+psql -U postgres -c "CREATE DATABASE orivex_dev;"
 ```
 
 ### Using APT (Ubuntu/Debian)
 
 ```bash
 sudo apt-get install postgresql postgresql-contrib
-sudo -u postgres psql -c "CREATE DATABASE learnault_dev;"
+sudo -u postgres psql -c "CREATE DATABASE orivex_dev;"
 ```
 
 ## Testing the Connection

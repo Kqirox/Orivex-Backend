@@ -1,4 +1,4 @@
-# Credential Controller & Routes Implementation
+# Credential controller & routes implementation
 
 ## Overview
 Implements credential management endpoints for certificates and achievements as specified in issue #8.

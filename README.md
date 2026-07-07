@@ -1,10 +1,10 @@
-# Learnault (APP)
+# Orivex (APP)
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](http://makeapullrequest.com)
 [![Stellar](https://img.shields.io/badge/Stellar-Built%20on%20SDF-black)](https://stellar.org)
 
-**Learnault** is a decentralized learn-to-earn platform built on the Stellar blockchain that democratizes access to financial literacy and digital skills while creating verifiable, portable credentials for learners worldwide.
+**Orivex** is a decentralized learn-to-earn platform built on the Stellar blockchain that democratizes access to financial literacy and digital skills while creating verifiable, portable credentials for learners worldwide.
 
 ## Vision
 
@@ -22,9 +22,9 @@ A world where anyone, anywhere can access quality education, earn while learning
 
 | Package                                                         | Description                                     | Tech Stack                           |
 | :-------------------------------------------------------------- | :---------------------------------------------- | :----------------------------------- |
-| [`contracts`](https://github.com/learnault/learnault-contracts) | Soroban smart contracts for credential issuance | Rust, Soroban                        |
-| [`api`](https://github.com/learnault/learnault-api)             | Backend API for user management and rewards     | Node.js, Express, PostgreSQL         |
-| [`app`](https://github.com/learnault/learnault)                 | Mobile-first PWA frontend                       | React, Next.js, TypeScript, Tailwind |
+| [`contracts`](https://github.com/Kqirox/Orivex-Contracts) | Soroban smart contracts for credential issuance | Rust, Soroban                        |
+| [`api`](https://github.com/Kqirox/Orivex-Backend)             | Backend API for user management and rewards     | Node.js, Express, PostgreSQL         |
+| [`app`](https://github.com/Kqirox/Orivex-Backend)                 | Mobile-first PWA frontend                       | React, Next.js, TypeScript, Tailwind |
 
 ## Architecture
 
@@ -58,8 +58,8 @@ For detailed architecture, see [ARCHITECTURE.md](./docs/ARCHITECTURE.md).
 
 ```bash
 # Clone the repository
-git clone https://github.com/learnault/learnault-api.git
-cd learnault-api
+git clone https://github.com/Kqirox/Orivex-Backend.git
+cd Orivex-Backend
 
 # Install dependencies
 pnpm install
@@ -119,4 +119,4 @@ This project is licensed under the MIT License - see the [LICENSE](./LICENSE) fi
 ## Contact
 
 - Discord: [Join our community](https://discord.gg)
-- Email: learnault@toneflix.net
+- Email: orivex@toneflix.net

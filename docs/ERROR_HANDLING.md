@@ -2,7 +2,7 @@
 
 ## Overview
 
-The error handling system provides centralized, consistent error handling across the Learnault API. It includes custom error classes, middleware for catching and formatting errors, and a wrapper for async handlers.
+The error handling system provides centralized, consistent error handling across the Orivex API. It includes custom error classes, middleware for catching and formatting errors, and a wrapper for async handlers.
 
 ## Error Classes
 

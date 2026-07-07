@@ -159,7 +159,7 @@ export class RewardService {
       sourceSecret: process.env.STELLAR_SOURCE_SECRET!,
       destinationPublicKey: claim.walletAddress,
       amount: totalAmount.toString(),
-      memo: `Learnault reward: module ${claim.moduleId}`,
+      memo: `Orivex reward: module ${claim.moduleId}`,
     })
     const stellarTxHash = paymentResult.hash
 
@@ -358,7 +358,7 @@ export class RewardService {
         sourceSecret: process.env.STELLAR_SOURCE_SECRET!,
         destinationPublicKey: request.walletAddress,
         amount: request.amount.toString(),
-        memo: request.memo ?? `Learnault withdrawal: ${transactionId}`,
+        memo: request.memo ?? `Orivex withdrawal: ${transactionId}`,
       })
       const stellarTxHash = paymentResult.hash
 
