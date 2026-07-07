@@ -123,7 +123,7 @@ GET /v1/modules?category=finance&page=1&limit=20
       "reward": "0.25",
       "language": "en",
       "completions": 1243,
-      "thumbnail": "https://cdn.learnault.io/modules/stablecoins.jpg"
+      "thumbnail": "https://cdn.orivex.io/modules/stablecoins.jpg"
     }
   ],
   "pagination": {
@@ -156,7 +156,7 @@ GET /v1/modules/:moduleId
       },
       {
         "type": "image",
-        "url": "https://cdn.learnault.io/content/stablecoin-diagram.jpg"
+        "url": "https://cdn.orivex.io/content/stablecoin-diagram.jpg"
       },
       {
         "type": "quiz",
