@@ -66,7 +66,7 @@ public spaces.
 Instances of abusive, harassing, or otherwise unacceptable behavior may be
 reported to the community leaders responsible for enforcement at:
 
-**conduct@learnault.io**
+**conduct@orivex.io**
 
 All complaints will be reviewed and investigated promptly and fairly.
 
@@ -123,7 +123,7 @@ community.
 
 If you believe someone is violating the Code of Conduct, please report it by:
 
-1. **Emailing conduct@learnault.io** with details of the incident
+1. **Emailing conduct@orivex.io** with details of the incident
 2. **Contacting a community leader directly** on Discord (for urgent matters)
 3. **Using the report feature** in GitHub or Discord
 
@@ -159,7 +159,7 @@ For answers to common questions about this code of conduct, see the FAQ at
 
 ## Our Commitment to Diversity
 
-Learnault is committed to fostering a diverse and inclusive community. We
+Orivex is committed to fostering a diverse and inclusive community. We
 actively welcome contributors from all backgrounds, particularly those from
 underserved communities and emerging markets. We believe that diverse
 perspectives make our project stronger and more effective at achieving our
@@ -180,4 +180,4 @@ them.
 
 ---
 
-**Thank you for helping make Learnault a welcoming, respectful, and inclusive community.**
+**Thank you for helping make Orivex a welcoming, respectful, and inclusive community.**

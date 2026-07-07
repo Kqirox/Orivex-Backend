@@ -38,7 +38,7 @@ describe('EmployerController', () => {
     ;(prisma.user.findMany as any).mockResolvedValue([
       {
         id: 'cand-1',
-        email: 'alice.learner+seed@learnault.dev',
+        email: 'alice.learner+seed@orivex.dev',
         name: 'Alice Learner',
         createdAt: new Date('2026-01-01T00:00:00Z'),
         completions: [
@@ -69,7 +69,7 @@ describe('EmployerController', () => {
       },
       {
         id: 'cand-2',
-        email: 'bob.learner+seed@learnault.dev',
+        email: 'bob.learner+seed@orivex.dev',
         name: 'Bob Learner',
         createdAt: new Date('2026-01-01T00:00:00Z'),
         completions: [
@@ -89,7 +89,7 @@ describe('EmployerController', () => {
     ])
 
     const req = {
-      user: { id: 'emp-1', email: 'employer@learnault.dev', role: 'employer' },
+      user: { id: 'emp-1', email: 'employer@orivex.dev', role: 'employer' },
       headers: { 'x-employer-plan': 'pro' },
       query: {
         skills: 'blockchain',
@@ -118,7 +118,7 @@ describe('EmployerController', () => {
   it('getCandidateProfile returns profile with verified credentials', async () => {
     ;(prisma.user.findUnique as any).mockResolvedValue({
       id: 'cand-1',
-      email: 'alice.learner+seed@learnault.dev',
+      email: 'alice.learner+seed@orivex.dev',
       name: 'Alice Learner',
       createdAt: new Date('2026-01-01T00:00:00Z'),
       completions: [
@@ -139,7 +139,7 @@ describe('EmployerController', () => {
     })
 
     const req = {
-      user: { id: 'emp-1', email: 'employer@learnault.dev', role: 'employer' },
+      user: { id: 'emp-1', email: 'employer@orivex.dev', role: 'employer' },
       params: { id: 'cand-1' },
     } as unknown as Request
     const res = createResponse()
@@ -158,7 +158,7 @@ describe('EmployerController', () => {
   it('getCandidateProfile blocks private candidates', async () => {
     process.env.PRIVATE_CANDIDATE_IDS = 'cand-private'
     const req = {
-      user: { id: 'emp-1', email: 'employer@learnault.dev', role: 'employer' },
+      user: { id: 'emp-1', email: 'employer@orivex.dev', role: 'employer' },
       params: { id: 'cand-private' },
     } as unknown as Request
     const res = createResponse()
@@ -171,7 +171,7 @@ describe('EmployerController', () => {
 
   it('contactCandidate requires pro plan', async () => {
     const req = {
-      user: { id: 'emp-1', email: 'employer@learnault.dev', role: 'employer' },
+      user: { id: 'emp-1', email: 'employer@orivex.dev', role: 'employer' },
       headers: { 'x-employer-plan': 'starter' },
       body: {
         candidateId: 'cand-1',
@@ -195,7 +195,7 @@ describe('EmployerController', () => {
   it('contactCandidate records outreach attempts', async () => {
     ;(prisma.user.findUnique as any).mockResolvedValue({
       id: 'cand-1',
-      email: 'alice.learner+seed@learnault.dev',
+      email: 'alice.learner+seed@orivex.dev',
       name: 'Alice Learner',
     })
     ;(prisma.webhookEndpoint.upsert as any).mockResolvedValue({ id: 'system-employer-outreach-log' })
@@ -205,7 +205,7 @@ describe('EmployerController', () => {
     })
 
     const req = {
-      user: { id: 'emp-1', email: 'employer@learnault.dev', role: 'employer' },
+      user: { id: 'emp-1', email: 'employer@orivex.dev', role: 'employer' },
       headers: { 'x-employer-plan': 'pro' },
       body: {
         candidateId: 'cand-1',

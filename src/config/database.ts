@@ -4,7 +4,7 @@ import { Pool } from 'pg'
 
 const connectionString =
   process.env.DATABASE_URL ??
-  'postgresql://user:password@localhost:5432/learnault'
+  'postgresql://user:password@localhost:5432/orivex_backend'
 
 const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined

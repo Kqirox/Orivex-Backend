@@ -157,3 +157,16 @@ prisma/*.db-journal
 !.node-version
 !.dockerignore
 !.helmignore
+
+# Local debug output (do not commit)
+lint_results*.txt
+server_error*.txt
+lint_output.json
+
+# IDE / OS noise
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+.idea/
+.vscode/*

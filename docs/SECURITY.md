@@ -1,8 +1,8 @@
-# Security Policy for Learnault
+# Security Policy for Orivex
 
 ## Overview
 
-Learnault is committed to protecting the security and integrity of our platform, users, and community. We take security vulnerabilities seriously and appreciate the efforts of security researchers and community members who help us maintain a safe environment.
+Orivex is committed to protecting the security and integrity of our platform, users, and community. We take security vulnerabilities seriously and appreciate the efforts of security researchers and community members who help us maintain a safe environment.
 
 This document outlines our security practices, how to report vulnerabilities, and what to expect when you report a security issue.
 
@@ -10,7 +10,7 @@ This document outlines our security practices, how to report vulnerabilities, an
 
 ## Supported Versions
 
-We currently support the following versions of Learnault with security updates:
+We currently support the following versions of Orivex with security updates:
 
 | Version     | Supported | Status                                       |
 | :---------- | :-------- | :------------------------------------------- |
@@ -64,9 +64,9 @@ The following assets are in scope for security reporting:
 
 **Core Platform:**
 
-- Smart contracts (`https://github.com/learnault/contracts/`)
-- Backend API (`https://github.com/learnault/api/`)
-- Frontend application (`https://github.com/learnault/learnault/`)
+- Smart contracts (`https://github.com/Kqirox/Orivex-Contracts/`)
+- Backend API (`https://github.com/Kqirox/Orivex-Backend/`)
+- Frontend application (`https://github.com/Kqirox/Orivex-Backend/`)
 - Authentication and authorization systems
 - Reward distribution mechanisms
 - Wallet integration
@@ -83,7 +83,7 @@ The following assets are in scope for security reporting:
 The following are generally out of scope:
 
 - Issues requiring physical access to user devices
-- Social engineering of Learnault team members
+- Social engineering of Orivex team members
 - Denial of service attacks (report these, but we handle separately)
 - Theoretical vulnerabilities without proof of concept
 - Issues in dependencies that are already reported upstream
@@ -142,13 +142,13 @@ We offer bug bounties for qualifying security vulnerabilities. The bounty amount
    - Keep recovery phrases offline and secure
 
 2. **Account Protection**
-   - Verify email confirmations come from @learnault.io
+   - Verify email confirmations come from @orivex.io
    - Be cautious of phishing attempts
    - Log out from shared devices
    - Monitor your wallet for unauthorized transactions
 
 3. **Safe Learning**
-   - Only access Learnault through official channels
+   - Only access Orivex through official channels
    - Report suspicious modules or content
    - Be wary of users asking for personal information
 
@@ -201,7 +201,7 @@ Our Soroban smart contracts implement:
 
 We ask that security researchers follow these guidelines:
 
-1. **Report Privately**: Send details to security@learnault.io first
+1. **Report Privately**: Send details to security@orivex.io first
 2. **Give Us Time**: Allow reasonable time to fix before public disclosure
 3. **Make Good Faith Efforts**: Avoid privacy violations, data destruction, or service interruption
 4. **Provide Details**: Quality reports help us fix faster
@@ -269,11 +269,11 @@ For **critical security emergencies** (active attack, compromised systems, etc.)
 | Method              | Contact                | Availability   |
 | :------------------ | :--------------------- | :------------- |
 | **Emergency Phone** | +1 (555) 123-4567      | 24/7           |
-| **Signal**          | @learnault.123         | 24/7           |
-| **Email**           | emergency@learnault.io | Monitored 24/7 |
+| **Signal**          | @orivex.123         | 24/7           |
+| **Email**           | emergency@orivex.io | Monitored 24/7 |
 | **Discord**         | @security-lead (ping)  | Business hours |
 
-For non-emergencies, please use security@learnault.io.
+For non-emergencies, please use security@orivex.io.
 
 _Last updated: February 2026_
 
@@ -299,4 +299,4 @@ This security policy may be updated periodically. Significant changes will be an
 
 ---
 
-_Thank you for helping keep Learnault and our community safe!_ 🛡️
+_Thank you for helping keep Orivex and our community safe!_ 🛡️
