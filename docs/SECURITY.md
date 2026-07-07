@@ -269,8 +269,8 @@ For **critical security emergencies** (active attack, compromised systems, etc.)
 | Method              | Contact                | Availability   |
 | :------------------ | :--------------------- | :------------- |
 | **Emergency Phone** | +1 (555) 123-4567      | 24/7           |
-| **Signal**          | @learnault.123         | 24/7           |
-| **Email**           | emergency@learnault.io | Monitored 24/7 |
+| **Signal**          | @orivex.123         | 24/7           |
+| **Email**           | emergency@orivex.io | Monitored 24/7 |
 | **Discord**         | @security-lead (ping)  | Business hours |
 
 For non-emergencies, please use security@learnault.io.
