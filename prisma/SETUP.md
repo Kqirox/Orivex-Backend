@@ -1,6 +1,6 @@
 # Prisma Setup Guide
 
-This directory contains the Prisma ORM configuration for the Orivex API.
+This directory contains the Prisma ORM configuration for the Learnault API.
 
 ## Quick Start
 
@@ -22,7 +22,7 @@ cp .env.example .env
 
 Example for local PostgreSQL:
 ```env
-DATABASE_URL="postgresql://postgres:postgres@localhost:5432/learnault_dev?schema=public"
+DATABASE_URL="postgresql://postgres:postgres@localhost:5432/orivex_dev?schema=public"
 ```
 
 ### 3. Run Migrations
@@ -128,7 +128,7 @@ prisma format
 
 ### Development
 ```env
-DATABASE_URL="postgresql://postgres:postgres@localhost:5432/learnault_dev?schema=public"
+DATABASE_URL="postgresql://postgres:postgres@localhost:5432/orivex_dev?schema=public"
 NODE_ENV=development
 ```
 
