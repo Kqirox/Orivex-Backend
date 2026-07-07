@@ -103,8 +103,8 @@ export class WebhookService {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'X-Learnault-Signature': signature,
-                    'X-Learnault-Event': eventType,
+                    'X-Orivex-Signature': signature,
+                    'X-Orivex-Event': eventType,
                 },
                 body: payload,
                 signal: AbortSignal.timeout(10000),
