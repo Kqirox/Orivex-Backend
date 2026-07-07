@@ -142,13 +142,13 @@ We offer bug bounties for qualifying security vulnerabilities. The bounty amount
    - Keep recovery phrases offline and secure
 
 2. **Account Protection**
-   - Verify email confirmations come from @learnault.io
+   - Verify email confirmations come from @orivex.io
    - Be cautious of phishing attempts
    - Log out from shared devices
    - Monitor your wallet for unauthorized transactions
 
 3. **Safe Learning**
-   - Only access Learnault through official channels
+   - Only access Orivex through official channels
    - Report suspicious modules or content
    - Be wary of users asking for personal information
 
