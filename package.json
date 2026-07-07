@@ -17,7 +17,7 @@
     "url": "git+https://github.com/learnault/learnault.git"
   },
   "license": "MIT",
-  "author": "Learnault Contributors",
+  "author": "Orivex-Backend Contributors",
   "scripts": {
     "dev": "nodemon",
     "build": "tsc",
@@ -89,6 +89,6 @@
     "test": "tests"
   },
   "bugs": {
-    "url": "https://github.com/Kqirox/Orivex-Backend/issues"
+    "url": "https://github.com/learnault/learnault/issues"
   }
 }
