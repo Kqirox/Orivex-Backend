@@ -22,7 +22,7 @@ cp .env.example .env
 
 Example for local PostgreSQL:
 ```env
-DATABASE_URL="postgresql://postgres:postgres@localhost:5432/orivex_dev?schema=public"
+DATABASE_URL="postgresql://postgres:postgres@localhost:5432/learnault_dev?schema=public"
 ```
 
 ### 3. Run Migrations
@@ -128,13 +128,13 @@ prisma format
 
 ### Development
 ```env
-DATABASE_URL="postgresql://postgres:postgres@localhost:5432/orivex_dev?schema=public"
+DATABASE_URL="postgresql://postgres:postgres@localhost:5432/learnault_dev?schema=public"
 NODE_ENV=development
 ```
 
 ### Production
 ```env
-DATABASE_URL="postgresql://user:password@host:5432/learnault_prod?schema=public&sslmode=require"
+DATABASE_URL="postgresql://user:password@host:5432/orivex_prod?schema=public&sslmode=require"
 NODE_ENV=production
 ```
 
