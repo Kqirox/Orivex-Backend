@@ -1,5 +1,5 @@
 {
-  "name": "orivex-backend",
+  "name": "learnault-api",
   "version": "0.1.0",
   "private": true,
   "description": "Decentralized learn-to-earn platform on Stellar",
@@ -11,7 +11,7 @@
     "learn-to-earn",
     "soroban"
   ],
-  "homepage": "https://github.com/learnault/learnault",
+  "homepage": "https://github.com/Kqirox/Orivex-Backend",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/learnault/learnault.git"
