@@ -11,10 +11,10 @@
     "learn-to-earn",
     "soroban"
   ],
-  "homepage": "https://github.com/Kqirox/Orivex-Backend",
+  "homepage": "https://github.com/learnault/learnault",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/learnault/learnault.git"
+    "url": "git+https://github.com/Kqirox/Orivex-Backend.git"
   },
   "license": "MIT",
   "author": "Learnault Contributors",
