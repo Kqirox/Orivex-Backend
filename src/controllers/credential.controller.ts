@@ -2,6 +2,7 @@ import { Request, Response } from 'express'
 import { asyncHandler } from '../middleware/error.middleware'
 import { BadRequestError, NotFoundError, UnauthorizedError } from '../utils/errors'
 import { prisma } from '../config/database'
+import { stellarService, StellarServiceError } from '../services/stellar.service'
 
 export class CredentialController {
   /**
@@ -301,10 +302,54 @@ export class CredentialController {
         throw new NotFoundError('Credential not found or invalid')
       }
 
+      // Perform on-chain verification only when onChainId is set.
+      // A credential without onChainId was never issued on-chain and cannot be verified.
+      let verification: {
+        status: 'verified' | 'unverified' | 'error'
+        valid: boolean
+        onChainId: string | null
+        verifiedAt: string
+        message?: string
+      }
+
+      if (credential.onChainId) {
+        try {
+          const onChainResult = await stellarService.verifyCredential(credential.onChainId)
+          verification = {
+            status: onChainResult.isValid ? 'verified' : 'unverified',
+            valid: onChainResult.isValid,
+            onChainId: credential.onChainId,
+            verifiedAt: new Date().toISOString(),
+          }
+        } catch (err) {
+          if (err instanceof StellarServiceError && err.code === 'CONTRACT_NOT_CONFIGURED') {
+            // Fail closed: without a configured contract we cannot claim on-chain validity
+            verification = {
+              status: 'error',
+              valid: false,
+              onChainId: credential.onChainId,
+              verifiedAt: new Date().toISOString(),
+              message: 'On-chain verification is not available: Soroban contract not configured',
+            }
+          } else {
+            throw err
+          }
+        }
+      } else {
+        // Credential has no on-chain record; cannot be considered verified
+        verification = {
+          status: 'unverified',
+          valid: false,
+          onChainId: null,
+          verifiedAt: new Date().toISOString(),
+          message: 'Credential has not been issued on-chain',
+        }
+      }
+
       res.json({
         success: true,
         data: {
-          valid: true,
+          valid: verification.valid,
           credential: {
             id: credential.id,
             holderName: credential.user.username,
@@ -314,11 +359,7 @@ export class CredentialController {
             onChainId: credential.onChainId,
             issuedAt: credential.issuedAt.toISOString(),
           },
-          verification: {
-            verifiedAt: new Date().toISOString(),
-            status: 'verified',
-            message: 'This credential is valid and has been verified on-chain',
-          },
+          verification,
         },
       })
     },

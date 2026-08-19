@@ -14,6 +14,22 @@ vi.mock('../../src/config/database', () => ({
   },
 }))
 
+// Mock stellarService so verifyCredential tests don't hit the network
+vi.mock('../../src/services/stellar.service', () => ({
+  stellarService: {
+    verifyCredential: vi.fn(),
+  },
+  StellarServiceError: class StellarServiceError extends Error {
+    constructor(
+      message: string,
+      public readonly code: string,
+    ) {
+      super(message)
+      this.name = 'StellarServiceError'
+    }
+  },
+}))
+
 interface AuthRequest extends Request {
   user?: {
     id: string
@@ -334,24 +350,34 @@ describe('CredentialController', () => {
   })
 
   describe('verifyCredential', () => {
-    it('should verify credential by onChainId', async () => {
+    // Import the mocked stellarService for assertions
+    const getStellarMock = async () => {
+      const mod = await import('../../src/services/stellar.service')
+
+      return mod.stellarService
+    }
+
+    it('should call stellarService.verifyCredential when onChainId is present', async () => {
       const mockCredential = {
         id: 'cred-1',
         userId: 'user-1',
         moduleId: 'module-1',
         onChainId: 'chain-1',
         issuedAt: new Date('2024-01-01'),
-        user: {
-          id: 'user-1',
-          username: 'John Doe',
-        },
-        module: {
-          id: 'module-1',
-          title: 'JavaScript Basics',
-          category: 'Programming',
-          difficulty: 'easy',
-        },
+        user: { id: 'user-1', username: 'John Doe' },
+        module: { id: 'module-1', title: 'JavaScript Basics', category: 'Programming', difficulty: 'easy' },
       }
+
+      const stellar = await getStellarMock()
+      ;(stellar.verifyCredential as ReturnType<typeof vi.fn>).mockResolvedValue({
+        isValid: true,
+        credentialId: 'chain-1',
+        issuer: 'GABC',
+        recipient: 'GXYZ',
+        credentialType: 'module',
+        issuedAt: 0,
+        data: {},
+      })
 
       mockRequest.params = { onChainId: 'chain-1' }
       vi.mocked(prisma.credential.findFirst).mockResolvedValue(mockCredential as any)
@@ -359,46 +385,73 @@ describe('CredentialController', () => {
       await credentialController.verifyCredential(
         mockRequest as Request,
         mockResponse as Response,
-        mockNext
+        mockNext,
       )
+      await new Promise((resolve) => setTimeout(resolve, 10))
 
-      expect(prisma.credential.findFirst).toHaveBeenCalledWith({
-        where: { onChainId: 'chain-1' },
-        include: expect.any(Object),
-      })
+      expect(stellar.verifyCredential).toHaveBeenCalledWith('chain-1')
       expect(mockResponse.json).toHaveBeenCalledWith({
         success: true,
         data: expect.objectContaining({
           valid: true,
-          credential: expect.objectContaining({
-            holderName: 'John Doe',
-            moduleName: 'JavaScript Basics',
-          }),
-          verification: expect.objectContaining({
-            status: 'verified',
-          }),
+          verification: expect.objectContaining({ status: 'verified' }),
         }),
       })
     })
 
-    it('should verify credential by regular id if onChainId not found', async () => {
+    it('should return valid:false and status:unverified when stellarService returns isValid:false', async () => {
+      const mockCredential = {
+        id: 'cred-1',
+        userId: 'user-1',
+        moduleId: 'module-1',
+        onChainId: 'chain-revoked',
+        issuedAt: new Date(),
+        user: { id: 'user-1', username: 'John Doe' },
+        module: { id: 'module-1', title: 'JS Basics', category: 'Programming', difficulty: 'easy' },
+      }
+
+      const stellar = await getStellarMock()
+      ;(stellar.verifyCredential as ReturnType<typeof vi.fn>).mockResolvedValue({
+        isValid: false,
+        credentialId: 'chain-revoked',
+        issuer: '',
+        recipient: '',
+        credentialType: '',
+        issuedAt: 0,
+        data: {},
+      })
+
+      mockRequest.params = { onChainId: 'chain-revoked' }
+      vi.mocked(prisma.credential.findFirst).mockResolvedValue(mockCredential as any)
+
+      await credentialController.verifyCredential(
+        mockRequest as Request,
+        mockResponse as Response,
+        mockNext,
+      )
+      await new Promise((resolve) => setTimeout(resolve, 10))
+
+      expect(mockResponse.json).toHaveBeenCalledWith({
+        success: true,
+        data: expect.objectContaining({
+          valid: false,
+          verification: expect.objectContaining({ status: 'unverified' }),
+        }),
+      })
+    })
+
+    it('should return valid:false and status:unverified when onChainId is null', async () => {
       const mockCredential = {
         id: 'cred-1',
         userId: 'user-1',
         moduleId: 'module-1',
         onChainId: null,
         issuedAt: new Date('2024-01-01'),
-        user: {
-          id: 'user-1',
-          username: 'John Doe',
-        },
-        module: {
-          id: 'module-1',
-          title: 'JavaScript Basics',
-          category: 'Programming',
-          difficulty: 'easy',
-        },
+        user: { id: 'user-1', username: 'John Doe' },
+        module: { id: 'module-1', title: 'JavaScript Basics', category: 'Programming', difficulty: 'easy' },
       }
+
+      const stellar = await getStellarMock()
 
       mockRequest.params = { onChainId: 'cred-1' }
       vi.mocked(prisma.credential.findFirst).mockResolvedValue(null)
@@ -407,23 +460,58 @@ describe('CredentialController', () => {
       await credentialController.verifyCredential(
         mockRequest as Request,
         mockResponse as Response,
-        mockNext
+        mockNext,
       )
+      await new Promise((resolve) => setTimeout(resolve, 10))
 
-      // Wait for async operations
-      await new Promise(resolve => setTimeout(resolve, 10))
-
-      expect(prisma.credential.findFirst).toHaveBeenCalled()
-      expect(prisma.credential.findUnique).toHaveBeenCalledWith({
-        where: { id: 'cred-1' },
-        include: expect.any(Object),
+      // stellarService must NOT be called for a credential with no onChainId
+      expect(stellar.verifyCredential).not.toHaveBeenCalled()
+      expect(mockResponse.json).toHaveBeenCalledWith({
+        success: true,
+        data: expect.objectContaining({
+          valid: false,
+          verification: expect.objectContaining({
+            status: 'unverified',
+            onChainId: null,
+          }),
+        }),
       })
-      expect(mockResponse.json).toHaveBeenCalledWith(
-        expect.objectContaining({
-          success: true,
-          data: expect.objectContaining({ valid: true }),
-        })
+    })
+
+    it('should fail closed (valid:false, status:error) when Soroban contract is not configured', async () => {
+      const mockCredential = {
+        id: 'cred-1',
+        userId: 'user-1',
+        moduleId: 'module-1',
+        onChainId: 'chain-1',
+        issuedAt: new Date(),
+        user: { id: 'user-1', username: 'John Doe' },
+        module: { id: 'module-1', title: 'Test', category: 'Test', difficulty: 'easy' },
+      }
+
+      const stellar = await getStellarMock()
+      const { StellarServiceError } = await import('../../src/services/stellar.service')
+      ;(stellar.verifyCredential as ReturnType<typeof vi.fn>).mockRejectedValue(
+        new StellarServiceError('No Soroban contract ID configured', 'CONTRACT_NOT_CONFIGURED'),
       )
+
+      mockRequest.params = { onChainId: 'chain-1' }
+      vi.mocked(prisma.credential.findFirst).mockResolvedValue(mockCredential as any)
+
+      await credentialController.verifyCredential(
+        mockRequest as Request,
+        mockResponse as Response,
+        mockNext,
+      )
+      await new Promise((resolve) => setTimeout(resolve, 10))
+
+      expect(mockResponse.json).toHaveBeenCalledWith({
+        success: true,
+        data: expect.objectContaining({
+          valid: false,
+          verification: expect.objectContaining({ status: 'error' }),
+        }),
+      })
     })
 
     it('should throw error if credential not found', async () => {
@@ -434,14 +522,12 @@ describe('CredentialController', () => {
       await credentialController.verifyCredential(
         mockRequest as Request,
         mockResponse as Response,
-        mockNext
+        mockNext,
       )
-
-      // Wait for async operations
-      await new Promise(resolve => setTimeout(resolve, 10))
+      await new Promise((resolve) => setTimeout(resolve, 10))
 
       expect(mockNext).toHaveBeenCalledWith(
-        expect.objectContaining({ message: 'Credential not found or invalid' })
+        expect.objectContaining({ message: 'Credential not found or invalid' }),
       )
     })
 
@@ -453,13 +539,13 @@ describe('CredentialController', () => {
         onChainId: 'chain-1',
         issuedAt: new Date(),
         user: { id: 'user-1', username: 'John Doe' },
-        module: {
-          id: 'module-1',
-          title: 'Test',
-          category: 'Test',
-          difficulty: 'easy',
-        },
+        module: { id: 'module-1', title: 'Test', category: 'Test', difficulty: 'easy' },
       }
+
+      const stellar = await getStellarMock()
+      ;(stellar.verifyCredential as ReturnType<typeof vi.fn>).mockResolvedValue({
+        isValid: true, credentialId: 'chain-1', issuer: '', recipient: '', credentialType: '', issuedAt: 0, data: {},
+      })
 
       mockRequest.user = undefined
       mockRequest.params = { onChainId: 'chain-1' }
@@ -468,10 +554,45 @@ describe('CredentialController', () => {
       await credentialController.verifyCredential(
         mockRequest as Request,
         mockResponse as Response,
-        mockNext
+        mockNext,
       )
+      await new Promise((resolve) => setTimeout(resolve, 10))
 
       expect(mockResponse.json).toHaveBeenCalled()
+    })
+
+    it('should never return valid:true without calling stellarService', async () => {
+      const mockCredential = {
+        id: 'cred-1',
+        userId: 'user-1',
+        moduleId: 'module-1',
+        onChainId: 'chain-1',
+        issuedAt: new Date(),
+        user: { id: 'user-1', username: 'John Doe' },
+        module: { id: 'module-1', title: 'Test', category: 'Test', difficulty: 'easy' },
+      }
+
+      const stellar = await getStellarMock()
+      // Simulate stellar returning invalid
+      ;(stellar.verifyCredential as ReturnType<typeof vi.fn>).mockResolvedValue({
+        isValid: false, credentialId: 'chain-1', issuer: '', recipient: '', credentialType: '', issuedAt: 0, data: {},
+      })
+
+      mockRequest.params = { onChainId: 'chain-1' }
+      vi.mocked(prisma.credential.findFirst).mockResolvedValue(mockCredential as any)
+
+      await credentialController.verifyCredential(
+        mockRequest as Request,
+        mockResponse as Response,
+        mockNext,
+      )
+      await new Promise((resolve) => setTimeout(resolve, 10))
+
+      // stellarService must have been called
+      expect(stellar.verifyCredential).toHaveBeenCalled()
+      // The response must NOT claim valid:true if stellar says false
+      const jsonArg = (mockResponse.json as ReturnType<typeof vi.fn>).mock.calls[0][0]
+      expect(jsonArg.data.valid).toBe(false)
     })
   })
 })
