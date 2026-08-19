@@ -13,19 +13,8 @@
  *           format: email
  *         username:
  *           type: string
- *         firstName:
- *           type: string
- *         lastName:
- *           type: string
- *         bio:
- *           type: string
- *         avatar:
- *           type: string
- *           format: url
  *         walletAddress:
  *           type: string
- *         isActive:
- *           type: boolean
  *         role:
  *           type: string
  *           enum: [LEARNER, EMPLOYER, ADMIN]
@@ -41,15 +30,6 @@
  *       properties:
  *         username:
  *           type: string
- *         firstName:
- *           type: string
- *         lastName:
- *           type: string
- *         bio:
- *           type: string
- *         avatar:
- *           type: string
- *           format: url
  *
  *     RegisterInput:
  *       type: object
