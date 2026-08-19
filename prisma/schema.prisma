@@ -76,10 +76,26 @@ model Transaction {
   userId          String
   user            User           @relation(fields: [userId], references: [id], onDelete: Cascade)
   amount          Float
-  type            String         // reward, refund, transfer
+  type            String         // module_reward, streak_bonus, referral_reward, withdrawal
   status          String         @default("pending") // pending, completed, failed
+  moduleId        String?        // present for module_reward and streak_bonus
+  stellarTxHash   String?        // populated after on-chain settlement
+  completedAt     DateTime?      // set when status transitions to completed
   createdAt       DateTime       @default(now())
   updatedAt       DateTime       @updatedAt
+}
+
+/// Tracks which (user, module) pairs have already had a reward claimed.
+/// The unique constraint is the database-level guard against double-claims
+/// across replicas; application-level checks read this table first.
+model RewardClaim {
+  id        String   @id @default(uuid())
+  userId    String
+  moduleId  String
+  createdAt DateTime @default(now())
+
+  @@unique([userId, moduleId])
+  @@map("reward_claims")
 }
 
 enum Role {
