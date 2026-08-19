@@ -2,12 +2,15 @@ import { Request, Response } from 'express'
 import { RewardService } from '../services/reward.service'
 import { asyncHandler } from '../middleware/error.middleware'
 import { BadRequestError } from '../utils/errors'
+import { WebhookService } from '../services/webhook.service'
 
 export class RewardController {
   private rewardService: RewardService
+  private webhookService: WebhookService
 
   constructor() {
     this.rewardService = new RewardService()
+    this.webhookService = new WebhookService()
   }
 
   /**
@@ -282,6 +285,18 @@ export class RewardController {
           completedAt: result.completedAt?.toISOString(),
         },
       })
+
+      // Emit reward.issued for completed withdrawals (non-blocking, after response sent)
+      if (result.status === 'completed') {
+        this.webhookService.queueEvent('reward.issued', {
+          userId,
+          transactionId: result.transactionId,
+          amount: result.amount,
+          stellarTxHash: result.stellarTxHash,
+          walletAddress,
+          issuedAt: result.completedAt?.toISOString() ?? new Date().toISOString(),
+        }).catch(err => console.error('[Webhook] reward.issued error:', err))
+      }
     },
   )
 

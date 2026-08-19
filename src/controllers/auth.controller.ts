@@ -4,9 +4,12 @@ import jwt from 'jsonwebtoken'
 import prisma from '../config/database'
 import { loginSchema, registerSchema } from '../schemas/auth.schema'
 import { UserRole } from '../types/user.types'
+import { WebhookService } from '../services/webhook.service'
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your-default-secret'
 const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '1d'
+
+const webhookService = new WebhookService()
 
 export class AuthController {
     /**
@@ -82,6 +85,15 @@ export class AuthController {
 
             // Generate token
             const token = this.generateToken(user.id, user.role)
+
+            // Emit user.registered webhook event (non-blocking)
+            webhookService.queueEvent('user.registered', {
+                userId: user.id,
+                email: user.email,
+                username: user.username,
+                role: user.role,
+                registeredAt: new Date().toISOString(),
+            }).catch(err => console.error('[Webhook] user.registered error:', err))
 
             res.status(201).json({
                 message: 'User registered successfully',

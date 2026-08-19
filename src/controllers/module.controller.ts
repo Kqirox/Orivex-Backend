@@ -5,8 +5,10 @@ const COMPLETION_IN_PROGRESS_SCORE = -1
 import { z } from 'zod'
 import { prisma } from '../config/database'
 import { NotificationService } from '../services/notification.service'
+import { WebhookService } from '../services/webhook.service'
 
 const notificationService = new NotificationService()
+const webhookService = new WebhookService()
 
 // Query parameter schemas for validation
 const listModulesSchema = z.object({
@@ -449,6 +451,17 @@ export const completeModule = async (req: Request, res: Response) => {
         ? `Great job! You scored ${score}% on "${module.title}" and earned ${module.reward} XLM.`
         : `You scored ${score}% on "${module.title}". Keep practicing to earn rewards!`
     ).catch(err => console.error('[Notifications] Quiz notification error:', err))
+
+    // Emit module.completed webhook event (non-blocking)
+    webhookService.queueEvent('module.completed', {
+      userId: req.user.id,
+      moduleId: id,
+      moduleTitle: module.title,
+      score,
+      isEligibleForReward,
+      reward: isEligibleForReward ? module.reward : 0,
+      completedAt: updatedCompletion.completedAt?.toISOString(),
+    }).catch(err => console.error('[Webhook] module.completed error:', err))
 
     res.json({
       message: 'Module completed successfully',
