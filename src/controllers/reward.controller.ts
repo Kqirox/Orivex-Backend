@@ -36,7 +36,7 @@ export class RewardController {
         throw new UnauthorizedError('User ID not found')
       }
 
-      const balance = this.rewardService.getBalance(userId)
+      const balance = await this.rewardService.getBalance(userId)
 
       res.json({
         success: true,
@@ -169,7 +169,7 @@ export class RewardController {
         filters.offset = offset
       }
 
-      const history = this.rewardService.getTransactionHistory(userId, filters)
+      const history = await this.rewardService.getTransactionHistory(userId, filters)
 
       res.json({
         success: true,
@@ -255,8 +255,8 @@ export class RewardController {
       }
 
       // Check if user has sufficient balance
-      if (!this.rewardService.hasSufficientBalance(userId, amount)) {
-        const balance = this.rewardService.getBalance(userId)
+      if (!(await this.rewardService.hasSufficientBalance(userId, amount))) {
+        const balance = await this.rewardService.getBalance(userId)
         throw new BadRequestError(
           `Insufficient balance. Available: ${balance.available} XLM, Requested: ${amount} XLM`,
         )

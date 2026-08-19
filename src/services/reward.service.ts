@@ -1,3 +1,4 @@
+import { prisma } from '../config/database'
 import { StellarService } from './stellar.service'
 import { NotificationService } from './notification.service'
 
@@ -36,6 +37,10 @@ export interface RewardResult {
   claimedAt: Date
 }
 
+/**
+ * The Transaction shape exposed by the service.  Field names mirror the
+ * persisted Prisma row; no in-memory augmentation is needed.
+ */
 export interface Transaction {
   id: string
   userId: string
@@ -96,15 +101,13 @@ export interface TransactionFilter {
   offset?: number
 }
 
-// ─── In-memory stores (replace with Prisma in production) ────────────────────
-
-const claimedRewards = new Map<string, Set<string>>()
-const transactions: Transaction[] = []
-const referralCodes = new Map<string, string>() // code -> referrerId
-const pendingWithdrawals = new Map<string, WithdrawalRequest>()
-
 // ─── RewardService ────────────────────────────────────────────────────────────
 
+/**
+ * Stateless service: every method reads from and writes to Postgres via Prisma.
+ * There is no module-level mutable state; constructing a new instance sees the
+ * same durable data as any other instance in any process.
+ */
 export class RewardService {
   private stellarService: StellarService
   private notificationService: NotificationService
@@ -138,59 +141,94 @@ export class RewardService {
   }
 
   /**
-   * Claim a reward for completing a module. Validates, calculates, pays out via
-   * Stellar and records the transaction.
+   * Claim a reward for completing a module.
+   *
+   * Outbox pattern:
+   *  1. Insert a RewardClaim row (unique on userId+moduleId) — this is the
+   *     atomic double-claim guard at the database level.
+   *  2. Insert a Transaction row with status='pending' BEFORE calling Stellar.
+   *  3. Submit the Stellar payment.
+   *  4. Flip the Transaction row to 'completed' (or 'failed').
+   *
+   * A crash between steps 2 and 4 leaves a 'pending' row that a reconciliation
+   * job can detect and retry (not in scope for this issue).
    */
   async claimReward(claim: RewardClaim, module: Module): Promise<RewardResult> {
-    // 1. Validate: prevent double-claiming
-    this.assertNotAlreadyClaimed(claim.userId, claim.moduleId)
-
-    // 2. Resolve referral code to referrer id
-    const referrerId = claim.referralCode
-      ? this.resolveReferralCode(claim.referralCode)
-      : undefined
-
-    // 3. Calculate amounts
-    const { baseAmount, streakBonus, referralBonus, totalAmount } =
-      this.calculateReward(module, claim.streakDays ?? 0, !!referrerId)
-
-    // 4. Payout via Stellar
-    const paymentResult = await this.stellarService.sendPayment({
-      sourceSecret: process.env.STELLAR_SOURCE_SECRET!,
-      destinationPublicKey: claim.walletAddress,
-      amount: totalAmount.toString(),
-      memo: `Orivex reward: module ${claim.moduleId}`,
-    })
-    const stellarTxHash = paymentResult.hash
-
-    // 5. Mark claimed to prevent duplicates
-    this.markAsClaimed(claim.userId, claim.moduleId)
-
-    // 6. Record transaction
-    const transactionId = this.recordTransaction({
-      userId: claim.userId,
-      moduleId: claim.moduleId,
-      amount: totalAmount,
-      type: 'module_reward',
-      status: 'completed',
-      stellarTxHash,
-    })
-
-    // 7. Pay referral bonus if applicable (non-blocking)
-    if (referrerId && referralBonus > 0) {
-      await this.payReferralBonus(referrerId, claim.moduleId, stellarTxHash)
+    // 1. Atomic double-claim guard via unique constraint
+    try {
+      await prisma.rewardClaim.create({
+        data: { userId: claim.userId, moduleId: claim.moduleId },
+      })
+    } catch (err: any) {
+      // Prisma P2002 = unique constraint violation
+      if (err?.code === 'P2002') {
+        throw new Error(
+          `User "${claim.userId}" has already claimed the reward for module "${claim.moduleId}"`,
+          { cause: err },
+        )
+      }
+      throw err
     }
 
-    // 8. Send push notification for reward receipt (non-blocking)
-    this.notificationService.queueNotification(
-      claim.userId,
-      'rewardReceipt',
-      'Reward Received!',
-      `You earned ${totalAmount.toFixed(2)} XLM for completing module ${module.title}.`
-    ).catch(err => console.error('[Notifications] Reward notification error:', err))
+    // 2. Calculate amounts
+    const hasReferral = Boolean(claim.referralCode)
+    const { baseAmount, streakBonus, referralBonus, totalAmount } =
+      this.calculateReward(module, claim.streakDays ?? 0, hasReferral)
+
+    // 3. Persist a 'pending' row before hitting Stellar (outbox)
+    const txRow = await prisma.transaction.create({
+      data: {
+        userId: claim.userId,
+        moduleId: claim.moduleId,
+        amount: totalAmount,
+        type: 'module_reward',
+        status: 'pending',
+      },
+    })
+
+    // 4. Payout via Stellar
+    let stellarTxHash: string
+
+    try {
+      const paymentResult = await this.stellarService.sendPayment({
+        sourceSecret: process.env.STELLAR_SOURCE_SECRET!,
+        destinationPublicKey: claim.walletAddress,
+        amount: totalAmount.toString(),
+        memo: `Orivex reward: module ${claim.moduleId}`,
+      })
+      stellarTxHash = paymentResult.hash
+
+      // 5. Flip to completed
+      await prisma.transaction.update({
+        where: { id: txRow.id },
+        data: {
+          status: 'completed',
+          stellarTxHash,
+          completedAt: new Date(),
+        },
+      })
+    } catch (err) {
+      await prisma.transaction.update({
+        where: { id: txRow.id },
+        data: { status: 'failed' },
+      })
+      throw err
+    }
+
+    // 6. Push notification (non-blocking)
+    this.notificationService
+      .queueNotification(
+        claim.userId,
+        'rewardReceipt',
+        'Reward Received!',
+        `You earned ${totalAmount.toFixed(2)} XLM for completing module ${module.title}.`,
+      )
+      .catch((err) =>
+        console.error('[Notifications] Reward notification error:', err),
+      )
 
     return {
-      transactionId,
+      transactionId: txRow.id,
       userId: claim.userId,
       moduleId: claim.moduleId,
       baseAmount,
@@ -203,58 +241,62 @@ export class RewardService {
   }
 
   /**
-   * Register a referral code mapped to a user.
-   */
-  registerReferralCode(code: string, userId: string): void {
-    if (referralCodes.has(code)) {
-      throw new Error(`Referral code "${code}" is already in use`)
-    }
-    referralCodes.set(code, userId)
-  }
-
-  /**
    * Check whether a user has already claimed the reward for a module.
+   * Reads from the durable RewardClaim table.
    */
-  hasAlreadyClaimed(userId: string, moduleId: string): boolean {
-    return claimedRewards.get(userId)?.has(moduleId) ?? false
+  async hasAlreadyClaimed(userId: string, moduleId: string): Promise<boolean> {
+    const existing = await prisma.rewardClaim.findUnique({
+      where: { userId_moduleId: { userId, moduleId } },
+    })
+
+    return existing !== null
   }
 
   /**
    * Return all recorded transactions.
    */
-  getTransactions(): Transaction[] {
-    return [...transactions]
+  async getTransactions(): Promise<Transaction[]> {
+    const rows = await prisma.transaction.findMany({
+      orderBy: { createdAt: 'asc' },
+    })
+
+    return rows.map(this.rowToTransaction)
   }
 
   /**
    * Return all recorded transactions for a specific user.
    */
-  getUserTransactions(userId: string): Transaction[] {
-    return transactions.filter((t) => t.userId === userId)
+  async getUserTransactions(userId: string): Promise<Transaction[]> {
+    const rows = await prisma.transaction.findMany({
+      where: { userId },
+      orderBy: { createdAt: 'asc' },
+    })
+
+    return rows.map(this.rowToTransaction)
   }
 
   /**
    * Calculate user's current balance based on completed rewards and withdrawals.
+   * Derived purely from durable Prisma rows; survives process restarts.
    */
-  getBalance(userId: string): Balance {
-    const userTransactions = this.getUserTransactions(userId)
+  async getBalance(userId: string): Promise<Balance> {
+    const rows = await prisma.transaction.findMany({ where: { userId } })
 
-    // Calculate totals from completed transactions only
-    const earned = userTransactions
+    const earned = rows
       .filter(
-        (t) =>
-          t.status === 'completed' &&
-          ['module_reward', 'streak_bonus', 'referral_reward'].includes(t.type),
+        (r) =>
+          r.status === 'completed' &&
+          ['module_reward', 'streak_bonus', 'referral_reward'].includes(r.type),
       )
-      .reduce((sum, t) => sum + t.amount, 0)
+      .reduce((sum, r) => sum + r.amount, 0)
 
-    const withdrawn = userTransactions
-      .filter((t) => t.status === 'completed' && t.type === 'withdrawal')
-      .reduce((sum, t) => sum + t.amount, 0)
+    const withdrawn = rows
+      .filter((r) => r.status === 'completed' && r.type === 'withdrawal')
+      .reduce((sum, r) => sum + r.amount, 0)
 
-    const pending = userTransactions
-      .filter((t) => t.status === 'pending' && t.type === 'withdrawal')
-      .reduce((sum, t) => sum + t.amount, 0)
+    const pending = rows
+      .filter((r) => r.status === 'pending' && r.type === 'withdrawal')
+      .reduce((sum, r) => sum + r.amount, 0)
 
     const available = earned - withdrawn - pending
 
@@ -270,52 +312,38 @@ export class RewardService {
   /**
    * Get transaction history with filtering and pagination.
    */
-  getTransactionHistory(
+  async getTransactionHistory(
     userId: string,
     filters: TransactionFilter = {},
-  ): {
+  ): Promise<{
     transactions: Transaction[]
     total: number
     hasMore: boolean
-  } {
-    let userTransactions = this.getUserTransactions(userId)
+  }> {
+    const where: any = { userId }
 
-    // Apply filters
-    if (filters.type) {
-      userTransactions = userTransactions.filter((t) => t.type === filters.type)
+    if (filters.type) where.type = filters.type
+    if (filters.status) where.status = filters.status
+    if (filters.fromDate || filters.toDate) {
+      where.createdAt = {}
+      if (filters.fromDate) where.createdAt.gte = filters.fromDate
+      if (filters.toDate) where.createdAt.lte = filters.toDate
     }
 
-    if (filters.status) {
-      userTransactions = userTransactions.filter(
-        (t) => t.status === filters.status,
-      )
-    }
+    const total = await prisma.transaction.count({ where })
 
-    if (filters.fromDate) {
-      userTransactions = userTransactions.filter(
-        (t) => t.createdAt >= filters.fromDate!,
-      )
-    }
-
-    if (filters.toDate) {
-      userTransactions = userTransactions.filter(
-        (t) => t.createdAt <= filters.toDate!,
-      )
-    }
-
-    // Sort by creation date (newest first)
-    userTransactions.sort(
-      (a, b) => b.createdAt.getTime() - a.createdAt.getTime(),
-    )
-
-    const total = userTransactions.length
     const limit = filters.limit ?? 20
     const offset = filters.offset ?? 0
 
-    const paginatedTransactions = userTransactions.slice(offset, offset + limit)
+    const rows = await prisma.transaction.findMany({
+      where,
+      orderBy: { createdAt: 'desc' },
+      skip: offset,
+      take: limit,
+    })
 
     return {
-      transactions: paginatedTransactions,
+      transactions: rows.map(this.rowToTransaction),
       total,
       hasMore: offset + limit < total,
     }
@@ -323,12 +351,17 @@ export class RewardService {
 
   /**
    * Process a withdrawal request.
+   *
+   * Outbox pattern: persist a 'pending' row BEFORE calling Stellar,
+   * then flip to 'completed' or 'failed' with the stellarTxHash.
    */
-  async processWithdrawal(
-    request: WithdrawalRequest,
-  ): Promise<WithdrawalResult> {
-    // Validate sufficient balance
-    const balance = this.getBalance(request.userId)
+  async processWithdrawal(request: WithdrawalRequest): Promise<WithdrawalResult> {
+    // Validate balance
+    const balance = await this.getBalance(request.userId)
+
+    if (request.amount <= 0) {
+      throw new Error('Withdrawal amount must be greater than 0')
+    }
 
     if (request.amount > balance.available) {
       throw new Error(
@@ -336,48 +369,48 @@ export class RewardService {
       )
     }
 
-    if (request.amount <= 0) {
-      throw new Error('Withdrawal amount must be greater than 0')
-    }
-
-    // Create pending withdrawal transaction
-    const transactionId = this.recordTransaction({
-      userId: request.userId,
-      amount: request.amount,
-      type: 'withdrawal',
-      status: 'pending',
-      stellarTxHash: undefined,
+    // Persist pending row before Stellar call (outbox)
+    const txRow = await prisma.transaction.create({
+      data: {
+        userId: request.userId,
+        amount: request.amount,
+        type: 'withdrawal',
+        status: 'pending',
+      },
     })
 
-    // Store pending withdrawal
-    pendingWithdrawals.set(transactionId, request)
-
-    // Process the withdrawal via Stellar
     try {
       const paymentResult = await this.stellarService.sendPayment({
         sourceSecret: process.env.STELLAR_SOURCE_SECRET!,
         destinationPublicKey: request.walletAddress,
         amount: request.amount.toString(),
-        memo: request.memo ?? `Orivex withdrawal: ${transactionId}`,
+        memo: request.memo ?? `Orivex withdrawal: ${txRow.id}`,
       })
       const stellarTxHash = paymentResult.hash
 
-      // Update transaction status to completed
-      this.updateTransactionStatus(transactionId, 'completed', stellarTxHash)
+      await prisma.transaction.update({
+        where: { id: txRow.id },
+        data: {
+          status: 'completed',
+          stellarTxHash,
+          completedAt: new Date(),
+        },
+      })
 
       return {
-        transactionId,
+        transactionId: txRow.id,
         userId: request.userId,
         amount: request.amount,
         stellarTxHash,
         status: 'completed',
-        requestedAt: new Date(),
+        requestedAt: txRow.createdAt,
         completedAt: new Date(),
       }
     } catch (error) {
-      // Mark transaction as failed
-      this.updateTransactionStatus(transactionId, 'failed')
-      pendingWithdrawals.delete(transactionId)
+      await prisma.transaction.update({
+        where: { id: txRow.id },
+        data: { status: 'failed' },
+      })
       throw error
     }
   }
@@ -385,8 +418,8 @@ export class RewardService {
   /**
    * Check if user has sufficient balance for withdrawal.
    */
-  hasSufficientBalance(userId: string, amount: number): boolean {
-    const balance = this.getBalance(userId)
+  async hasSufficientBalance(userId: string, amount: number): Promise<boolean> {
+    const balance = await this.getBalance(userId)
 
     return amount <= balance.available
   }
@@ -406,76 +439,44 @@ export class RewardService {
     return +(baseAmount * bonusRate).toFixed(7)
   }
 
-  private resolveReferralCode(code: string): string | undefined {
-    return referralCodes.get(code)
-  }
+  /**
+   * Convert a raw Prisma row (type: string) to the typed Transaction interface.
+   * Unknown type strings fall back to 'module_reward' to avoid runtime errors
+   * on legacy seed rows with free-form type values.
+   */
+  private rowToTransaction(row: {
+    id: string
+    userId: string
+    moduleId?: string | null
+    amount: number
+    type: string
+    status: string
+    stellarTxHash?: string | null
+    createdAt: Date
+    completedAt?: Date | null
+  }): Transaction {
+    const validTypes = new Set([
+      'module_reward',
+      'streak_bonus',
+      'referral_reward',
+      'withdrawal',
+    ])
+    const validStatuses = new Set(['pending', 'completed', 'failed'])
 
-  private assertNotAlreadyClaimed(userId: string, moduleId: string): void {
-    if (this.hasAlreadyClaimed(userId, moduleId)) {
-      throw new Error(
-        `User "${userId}" has already claimed the reward for module "${moduleId}"`,
-      )
+    return {
+      id: row.id,
+      userId: row.userId,
+      moduleId: row.moduleId ?? undefined,
+      amount: row.amount,
+      type: validTypes.has(row.type)
+        ? (row.type as Transaction['type'])
+        : 'module_reward',
+      status: validStatuses.has(row.status)
+        ? (row.status as Transaction['status'])
+        : 'pending',
+      stellarTxHash: row.stellarTxHash ?? undefined,
+      createdAt: row.createdAt,
+      completedAt: row.completedAt ?? undefined,
     }
-  }
-
-  private markAsClaimed(userId: string, moduleId: string): void {
-    if (!claimedRewards.has(userId)) {
-      claimedRewards.set(userId, new Set())
-    }
-    claimedRewards.get(userId)!.add(moduleId)
-  }
-
-  private recordTransaction(
-    data: Omit<Transaction, 'id' | 'createdAt'>,
-  ): string {
-    const id = `txn_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`
-    transactions.push({ id, ...data, createdAt: new Date() })
-
-    return id
-  }
-
-  private updateTransactionStatus(
-    transactionId: string,
-    status: Transaction['status'],
-    stellarTxHash?: string,
-  ): void {
-    const transaction = transactions.find((t) => t.id === transactionId)
-    if (transaction) {
-      transaction.status = status
-      if (stellarTxHash) {
-        transaction.stellarTxHash = stellarTxHash
-      }
-      if (status === 'completed') {
-        transaction.completedAt = new Date()
-      }
-    }
-  }
-
-  private async payReferralBonus(
-    referrerId: string,
-    _moduleId: string,
-    _originalTxHash: string,
-  ): Promise<void> {
-    try {
-      // TODO: Implement user wallet storage and retrieval
-      // For now, skip referral bonus if wallet address cannot be retrieved
-      // This requires a user wallet storage mechanism to be implemented
-      console.warn(
-        `Referral bonus skipped: No wallet address storage implemented for user ${referrerId}`,
-      )
-
-      return
-    } catch (err) {
-      // Referral bonus failure must NOT roll back the learner's main reward
-      console.error(`Failed to pay referral bonus to user ${referrerId}:`, err)
-    }
-  }
-
-  /** @internal – resets in-memory state between unit tests */
-  _resetState(): void {
-    claimedRewards.clear()
-    transactions.length = 0
-    referralCodes.clear()
-    pendingWithdrawals.clear()
   }
 }
