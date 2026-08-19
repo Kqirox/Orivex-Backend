@@ -2,7 +2,8 @@ export type WebhookEventType =
     | 'module.completed'
     | 'reward.issued'
     | 'user.registered'
-    | 'system.test';
+    | 'system.test'
+    | 'employer.contact_attempt';
 
 export interface WebhookPayload {
     eventId: string;

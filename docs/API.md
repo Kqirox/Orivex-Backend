@@ -463,9 +463,10 @@ X-RateLimit-Reset: 1627583492
 
 You can register webhooks to receive real-time events:
 
-- `user.completed_module`
+- `user.registered`
+- `module.completed`
 - `reward.issued`
-- `credential.verified`
+- `employer.contact_attempt`
 
 See [Webhook Documentation](./WEBHOOKS.md) for details.
 

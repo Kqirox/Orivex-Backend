@@ -5,6 +5,10 @@ import prisma from '../src/config/database'
 import bcrypt from 'bcryptjs'
 // import jwt from 'jsonwebtoken'
 
+const { queueEventMock } = vi.hoisted(() => ({
+    queueEventMock: vi.fn().mockResolvedValue(undefined),
+}))
+
 // Mock dependencies
 vi.mock('../src/config/database', () => ({
     default: {
@@ -30,6 +34,14 @@ vi.mock('jsonwebtoken', () => ({
         sign: vi.fn().mockReturnValue('mock_token'),
     },
 }))
+
+vi.mock('../src/services/webhook.service', () => {
+    class WebhookService {
+        queueEvent = queueEventMock
+    }
+
+    return { WebhookService }
+})
 
 describe('AuthController', () => {
     let authController: AuthController
@@ -70,6 +82,15 @@ describe('AuthController', () => {
                 message: 'User registered successfully',
                 token: 'mock_token',
             }))
+            expect(queueEventMock).toHaveBeenCalledWith(
+                'user.registered',
+                expect.objectContaining({
+                    userId: '1',
+                    email: 'test@example.com',
+                    username: 'testuser',
+                    role: 'LEARNER',
+                }),
+            )
         })
 
         it('should return 400 for invalid input', async () => {
