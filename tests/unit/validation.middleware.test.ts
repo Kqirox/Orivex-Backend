@@ -200,13 +200,7 @@ describe('validate', () => {
 
 describe('validateProfileUpdate', () => {
   it('calls next() for a valid update payload', () => {
-    const { req, res, next } = makeMocks({
-      username: 'valid_user',
-      firstName: 'John',
-      lastName: 'Doe',
-      bio: 'Hello world',
-      avatar: 'https://example.com/avatar.jpg',
-    })
+    const { req, res, next } = makeMocks({ username: 'valid_user' })
 
     validateProfileUpdate(req as Request, res as Response, next)
 
@@ -259,65 +253,22 @@ describe('validateProfileUpdate', () => {
     })
   })
 
-  it('returns 400 when firstName exceeds 50 characters', () => {
-    const { req, res, next } = makeMocks({ firstName: 'A'.repeat(51) })
-
-    validateProfileUpdate(req as Request, res as Response, next)
-
-    expect(res.status).toHaveBeenCalledWith(400)
-    expect(res.json).toHaveBeenCalledWith({
-      message: 'Validation failed',
-      errors: { body: ['First name must be less than 50 characters'] }
-    })
-  })
-
-  it('returns 400 when lastName exceeds 50 characters', () => {
-    const { req, res, next } = makeMocks({ lastName: 'B'.repeat(51) })
-
-    validateProfileUpdate(req as Request, res as Response, next)
-
-    expect(res.status).toHaveBeenCalledWith(400)
-    expect(res.json).toHaveBeenCalledWith({
-      message: 'Validation failed',
-      errors: { body: ['Last name must be less than 50 characters'] }
-    })
-  })
-
-  it('returns 400 when bio exceeds 500 characters', () => {
-    const { req, res, next } = makeMocks({ bio: 'x'.repeat(501) })
-
-    validateProfileUpdate(req as Request, res as Response, next)
-
-    expect(res.status).toHaveBeenCalledWith(400)
-    expect(res.json).toHaveBeenCalledWith({
-      message: 'Validation failed',
-      errors: { body: ['Bio must be less than 500 characters'] }
-    })
-  })
-
-  it('returns 400 when avatar is not a valid URL', () => {
-    const { req, res, next } = makeMocks({ avatar: 'not-a-url' })
-
-    validateProfileUpdate(req as Request, res as Response, next)
-
-    expect(res.status).toHaveBeenCalledWith(400)
-    expect(res.json).toHaveBeenCalledWith({
-      message: 'Validation failed',
-      errors: { body: ['Invalid URL format'] }
-    })
-  })
-
-  it('returns multiple errors when multiple fields are invalid', () => {
+  it('ignores unsupported fields (firstName, lastName, bio, avatar)', () => {
     const { req, res, next } = makeMocks({
-      username: 'ab',
-      bio: 'x'.repeat(501),
+      username: 'valid_user',
+      firstName: 'John',
+      lastName: 'Doe',
+      bio: 'Hello world',
+      avatar: 'https://example.com/avatar.jpg',
     })
 
     validateProfileUpdate(req as Request, res as Response, next)
 
-    expect(res.status).toHaveBeenCalledWith(400)
-    const response = (res.json as ReturnType<typeof vi.fn>).mock.calls[0][0]
-    expect(response.errors.body.length).toBeGreaterThanOrEqual(2)
+    expect(next).toHaveBeenCalledOnce()
+    expect((req as any).body.firstName).toBeUndefined()
+    expect((req as any).body.lastName).toBeUndefined()
+    expect((req as any).body.bio).toBeUndefined()
+    expect((req as any).body.avatar).toBeUndefined()
   })
 })
 

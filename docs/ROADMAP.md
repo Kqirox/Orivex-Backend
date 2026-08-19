@@ -13,8 +13,8 @@ service. It is intentionally short — execution happens in feature branches.
 
 ## Next
 
-- Replace in-memory stores in `src/services/reward.service.ts` with Prisma
-  calls, removing the implicit in-test singletons.
+- ✅ Replace in-memory stores in `src/services/reward.service.ts` with Prisma
+  calls, removing the implicit in-test singletons (completed in #15).
 - Add structured request IDs and propagate them across logs and HTTP
   responses.
 - Add OpenTelemetry traces for outbound Stellar RPC and webhook delivery.

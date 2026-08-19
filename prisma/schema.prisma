@@ -42,6 +42,22 @@ model Module {
   updatedAt       DateTime       @updatedAt
   completions     Completion[]
   credentials     Credential[]
+  questions       QuizQuestion[]
+}
+
+/// Server-side answer key for a module's quiz.
+/// The correct option ID is stored only on the server; clients never see answerKey.
+model QuizQuestion {
+  id        String   @id @default(uuid())
+  moduleId  String
+  module    Module   @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+  prompt    String
+  options   String   // JSON array of {id: string, text: string}
+  answerKey String   // the id value of the correct option
+  position  Int      @default(0) // display order within the module
+
+  @@index([moduleId])
+  @@map("quiz_questions")
 }
 
 model Completion {
@@ -77,16 +93,33 @@ model Transaction {
   userId          String
   user            User           @relation(fields: [userId], references: [id], onDelete: Cascade)
   amount          Float
-  type            String         // reward, refund, transfer
+  type            String         // module_reward, streak_bonus, referral_reward, withdrawal
   status          String         @default("pending") // pending, completed, failed
+  moduleId        String?        // present for module_reward and streak_bonus
+  stellarTxHash   String?        // populated after on-chain settlement
+  completedAt     DateTime?      // set when status transitions to completed
   createdAt       DateTime       @default(now())
   updatedAt       DateTime       @updatedAt
+}
+
+/// Tracks which (user, module) pairs have already had a reward claimed.
+/// The unique constraint is the database-level guard against double-claims
+/// across replicas; application-level checks read this table first.
+model RewardClaim {
+  id        String   @id @default(uuid())
+  userId    String
+  moduleId  String
+  createdAt DateTime @default(now())
+
+  @@unique([userId, moduleId])
+  @@map("reward_claims")
 }
 
 enum Role {
   ADMIN
   LEARNER
   INSTRUCTOR
+  EMPLOYER
 }
 
 model ReferralCode {

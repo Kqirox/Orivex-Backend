@@ -5,7 +5,7 @@ import { employerLimiter } from '../../middleware/rate-limit.middleware'
 
 const router: Router = Router()
 
-router.use(authenticate, authorize('employer'), employerLimiter)
+router.use(authenticate, authorize('EMPLOYER'), employerLimiter)
 
 // GET /employer/search - search talent with filters
 router.get('/search', searchTalent)

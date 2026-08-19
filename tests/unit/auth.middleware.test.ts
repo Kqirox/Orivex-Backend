@@ -42,13 +42,13 @@ describe('authenticate', () => {
   it('calls next() and attaches user when token is valid', () => {
     const { req, res, next } = makeMocks()
     req.headers = {
-      authorization: `Bearer ${makeToken({ id: 'user-1', email: 'a@b.com', role: 'learner' })}`,
+      authorization: `Bearer ${makeToken({ id: 'user-1', email: 'a@b.com', role: 'LEARNER' })}`,
     }
 
     authenticate(req as Request, res as Response, next)
 
     expect(next).toHaveBeenCalledOnce()
-    expect((req as any).user).toMatchObject({ id: 'user-1', role: 'learner' })
+    expect((req as any).user).toMatchObject({ id: 'user-1', role: 'LEARNER' })
     expect(res.status).not.toHaveBeenCalled()
   })
 
@@ -76,7 +76,7 @@ describe('authenticate', () => {
 
   it('returns 401 with "Token has expired" for an expired token', () => {
     const { req, res, next } = makeMocks()
-    const token = makeToken({ id: 'u1', email: 'x@y.com', role: 'learner' }, -1)
+    const token = makeToken({ id: 'u1', email: 'x@y.com', role: 'LEARNER' }, -1)
     req.headers = { authorization: `Bearer ${token}` }
 
     authenticate(req as Request, res as Response, next)
@@ -114,13 +114,13 @@ describe('optionalAuthenticate', () => {
   it('attaches user and calls next() when a valid token is provided', () => {
     const { req, res, next } = makeMocks()
     req.headers = {
-      authorization: `Bearer ${makeToken({ id: 'user-2', email: 'b@c.com', role: 'employer' })}`,
+      authorization: `Bearer ${makeToken({ id: 'user-2', email: 'b@c.com', role: 'EMPLOYER' })}`,
     }
 
     optionalAuthenticate(req as Request, res as Response, next)
 
     expect(next).toHaveBeenCalledOnce()
-    expect((req as any).user).toMatchObject({ id: 'user-2', role: 'employer' })
+    expect((req as any).user).toMatchObject({ id: 'user-2', role: 'EMPLOYER' })
   })
 
   it('calls next() without blocking when token is invalid', () => {
@@ -135,7 +135,7 @@ describe('optionalAuthenticate', () => {
 
   it('calls next() without blocking when token is expired', () => {
     const { req, res, next } = makeMocks()
-    const token = makeToken({ id: 'u1', email: 'x@y.com', role: 'learner' }, -1)
+    const token = makeToken({ id: 'u1', email: 'x@y.com', role: 'LEARNER' }, -1)
     req.headers = { authorization: `Bearer ${token}` }
 
     optionalAuthenticate(req as Request, res as Response, next)
@@ -150,9 +150,9 @@ describe('optionalAuthenticate', () => {
 describe('authorize', () => {
   it('calls next() when user has a matching role', () => {
     const { req, res, next } = makeMocks();
-    (req as any).user = { id: 'u1', email: 'a@b.com', role: 'learner' }
+    (req as any).user = { id: 'u1', email: 'a@b.com', role: 'LEARNER' }
 
-    authorize('learner')(req as Request, res as Response, next)
+    authorize('LEARNER')(req as Request, res as Response, next)
 
     expect(next).toHaveBeenCalledOnce()
     expect(res.status).not.toHaveBeenCalled()
@@ -160,18 +160,18 @@ describe('authorize', () => {
 
   it('calls next() when user role matches one of multiple allowed roles', () => {
     const { req, res, next } = makeMocks();
-    (req as any).user = { id: 'u1', email: 'a@b.com', role: 'employer' }
+    (req as any).user = { id: 'u1', email: 'a@b.com', role: 'EMPLOYER' }
 
-    authorize('learner', 'employer')(req as Request, res as Response, next)
+    authorize('LEARNER', 'EMPLOYER')(req as Request, res as Response, next)
 
     expect(next).toHaveBeenCalledOnce()
   })
 
   it('returns 403 when user role is not in the allowed list', () => {
     const { req, res, next } = makeMocks();
-    (req as any).user = { id: 'u1', email: 'a@b.com', role: 'learner' }
+    (req as any).user = { id: 'u1', email: 'a@b.com', role: 'LEARNER' }
 
-    authorize('employer')(req as Request, res as Response, next)
+    authorize('EMPLOYER')(req as Request, res as Response, next)
 
     expect(res.status).toHaveBeenCalledWith(403)
     expect(res.json).toHaveBeenCalledWith(
@@ -183,7 +183,7 @@ describe('authorize', () => {
   it('returns 401 when req.user is not set', () => {
     const { req, res, next } = makeMocks()
 
-    authorize('learner')(req as Request, res as Response, next)
+    authorize('LEARNER')(req as Request, res as Response, next)
 
     expect(res.status).toHaveBeenCalledWith(401)
     expect(res.json).toHaveBeenCalledWith({ message: 'Authentication required' })

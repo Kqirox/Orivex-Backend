@@ -144,7 +144,7 @@ function profileFromCandidate(candidate: CandidateRecord) {
 }
 
 function isEmployer(req: Request) {
-  return req.user?.role === 'employer'
+  return req.user?.role === 'EMPLOYER'
 }
 
 export const searchTalent = async (req: Request, res: Response) => {
@@ -368,6 +368,9 @@ export const contactCandidate = async (req: Request, res: Response) => {
     return res.status(404).json({ message: 'Candidate not found' })
   }
 
+  // Outreach is recorded as an audit trail directly on WebhookDelivery rather than
+  // routed through WebhookService.queueEvent: the system endpoint's URL is
+  // internal-only and must never trigger an outbound HMAC-signed HTTP delivery.
   const outreachEndpoint = await prisma.webhookEndpoint.upsert({
     where: { id: 'system-employer-outreach-log' },
     update: {

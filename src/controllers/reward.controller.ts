@@ -2,12 +2,15 @@ import { Request, Response } from 'express'
 import { RewardService } from '../services/reward.service'
 import { asyncHandler } from '../middleware/error.middleware'
 import { BadRequestError } from '../utils/errors'
+import { WebhookService } from '../services/webhook.service'
 
 export class RewardController {
   private rewardService: RewardService
+  private webhookService: WebhookService
 
   constructor() {
     this.rewardService = new RewardService()
+    this.webhookService = new WebhookService()
   }
 
   /**
@@ -36,7 +39,7 @@ export class RewardController {
         throw new UnauthorizedError('User ID not found')
       }
 
-      const balance = this.rewardService.getBalance(userId)
+      const balance = await this.rewardService.getBalance(userId)
 
       res.json({
         success: true,
@@ -169,7 +172,7 @@ export class RewardController {
         filters.offset = offset
       }
 
-      const history = this.rewardService.getTransactionHistory(userId, filters)
+      const history = await this.rewardService.getTransactionHistory(userId, filters)
 
       res.json({
         success: true,
@@ -255,8 +258,8 @@ export class RewardController {
       }
 
       // Check if user has sufficient balance
-      if (!this.rewardService.hasSufficientBalance(userId, amount)) {
-        const balance = this.rewardService.getBalance(userId)
+      if (!(await this.rewardService.hasSufficientBalance(userId, amount))) {
+        const balance = await this.rewardService.getBalance(userId)
         throw new BadRequestError(
           `Insufficient balance. Available: ${balance.available} XLM, Requested: ${amount} XLM`,
         )
@@ -282,6 +285,18 @@ export class RewardController {
           completedAt: result.completedAt?.toISOString(),
         },
       })
+
+      // Emit reward.issued for completed withdrawals (non-blocking, after response sent)
+      if (result.status === 'completed') {
+        this.webhookService.queueEvent('reward.issued', {
+          userId,
+          transactionId: result.transactionId,
+          amount: result.amount,
+          stellarTxHash: result.stellarTxHash,
+          walletAddress,
+          issuedAt: result.completedAt?.toISOString() ?? new Date().toISOString(),
+        }).catch(err => console.error('[Webhook] reward.issued error:', err))
+      }
     },
   )
 

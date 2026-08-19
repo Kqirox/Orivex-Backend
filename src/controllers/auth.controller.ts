@@ -4,9 +4,12 @@ import jwt from 'jsonwebtoken'
 import prisma from '../config/database'
 import { loginSchema, registerSchema } from '../schemas/auth.schema'
 import { UserRole } from '../types/user.types'
+import { WebhookService } from '../services/webhook.service'
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your-default-secret'
 const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '1d'
+
+const webhookService = new WebhookService()
 
 export class AuthController {
     /**
@@ -48,7 +51,7 @@ export class AuthController {
                 return
             }
 
-            const { email, password, username, role } = validation.data
+            const { email, password, username } = validation.data
 
             // Check if user already exists
             const existingUser = await prisma.user.findFirst({
@@ -70,18 +73,27 @@ export class AuthController {
             const salt = await bcrypt.genSalt(10)
             const hashedPassword = await bcrypt.hash(password, salt)
 
-            // Create user
+            // Create user — role is always LEARNER; callers cannot self-assign roles
             const user = await prisma.user.create({
                 data: {
                     email,
                     username,
                     password: hashedPassword,
-                    role: (role as any) || UserRole.LEARNER,
+                    role: UserRole.LEARNER,
                 }
             })
 
             // Generate token
             const token = this.generateToken(user.id, user.role)
+
+            // Emit user.registered webhook event (non-blocking)
+            webhookService.queueEvent('user.registered', {
+                userId: user.id,
+                email: user.email,
+                username: user.username,
+                role: user.role,
+                registeredAt: new Date().toISOString(),
+            }).catch(err => console.error('[Webhook] user.registered error:', err))
 
             res.status(201).json({
                 message: 'User registered successfully',

@@ -89,8 +89,13 @@ describe('EmployerController', () => {
     ])
 
     const req = {
-      user: { id: 'emp-1', email: 'employer@orivex.dev', role: 'employer' },
-      query: { skills: 'blockchain', location: 'lagos', credentials: 'verified' },
+      user: { id: 'emp-1', email: 'employer@orivex.dev', role: 'EMPLOYER' },
+      headers: { 'x-employer-plan': 'pro' },
+      query: {
+        skills: 'blockchain',
+        location: 'lagos',
+        credentials: 'verified',
+      },
     } as unknown as Request
     const res = createResponse()
 
@@ -159,7 +164,7 @@ describe('EmployerController', () => {
     ;(prisma.user.findUnique as any).mockResolvedValue(candidateFixture)
 
     const req = {
-      user: { id: 'emp-1', email: 'employer@orivex.dev', role: 'employer' },
+      user: { id: 'emp-1', email: 'employer@orivex.dev', role: 'EMPLOYER' },
       params: { id: 'cand-1' },
     } as unknown as Request
     const res = createResponse()
@@ -178,7 +183,7 @@ describe('EmployerController', () => {
   it('getCandidateProfile blocks private candidates', async () => {
     process.env.PRIVATE_CANDIDATE_IDS = 'cand-private'
     const req = {
-      user: { id: 'emp-1', email: 'employer@orivex.dev', role: 'employer' },
+      user: { id: 'emp-1', email: 'employer@orivex.dev', role: 'EMPLOYER' },
       params: { id: 'cand-private' },
     } as unknown as Request
     const res = createResponse()
@@ -193,7 +198,8 @@ describe('EmployerController', () => {
     mockEmployerPlan('starter')
 
     const req = {
-      user: { id: 'emp-1', email: 'employer@orivex.dev', role: 'employer' },
+      user: { id: 'emp-1', email: 'employer@orivex.dev', role: 'EMPLOYER' },
+      headers: { 'x-employer-plan': 'starter' },
       body: {
         candidateId: 'cand-1',
         subject: 'Role opportunity',
@@ -254,7 +260,8 @@ describe('EmployerController', () => {
     })
 
     const req = {
-      user: { id: 'emp-1', email: 'employer@orivex.dev', role: 'employer' },
+      user: { id: 'emp-1', email: 'employer@orivex.dev', role: 'EMPLOYER' },
+      headers: { 'x-employer-plan': 'pro' },
       body: {
         candidateId: 'cand-1',
         subject: 'Role opportunity',

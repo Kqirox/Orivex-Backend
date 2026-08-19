@@ -3,6 +3,18 @@ import { RewardController } from '../../src/controllers/reward.controller'
 import { RewardService } from '../../src/services/reward.service'
 import { Request, Response } from 'express'
 
+const { queueEventMock } = vi.hoisted(() => ({
+  queueEventMock: vi.fn().mockResolvedValue(undefined),
+}))
+
+vi.mock('../../src/services/webhook.service', () => {
+  class WebhookService {
+    queueEvent = queueEventMock
+  }
+
+  return { WebhookService }
+})
+
 // Mock RewardService methods using vi.spyOn
 describe('RewardController', () => {
   let controller: RewardController
@@ -337,6 +349,15 @@ describe('RewardController', () => {
           message: 'Withdrawal processed successfully',
         }),
       )
+      expect(queueEventMock).toHaveBeenCalledWith(
+        'reward.issued',
+        expect.objectContaining({
+          userId: 'user-123',
+          transactionId: 'txn-withdrawal-123',
+          amount: 50,
+          stellarTxHash: 'stellar-hash-xyz',
+        }),
+      )
     })
 
     it('should reject withdrawal if wallet address is missing', async () => {
@@ -459,6 +480,7 @@ describe('RewardController', () => {
       expect(nextFn).toHaveBeenCalledWith(
         expect.objectContaining({ message: 'Stellar network error' }),
       )
+      expect(queueEventMock).not.toHaveBeenCalled()
     })
   })
 

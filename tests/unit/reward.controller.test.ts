@@ -3,6 +3,18 @@ import { RewardController } from '../../src/controllers/reward.controller'
 import { RewardService } from '../../src/services/reward.service'
 import { Request, Response } from 'express'
 
+const { queueEventMock } = vi.hoisted(() => ({
+  queueEventMock: vi.fn().mockResolvedValue(undefined),
+}))
+
+vi.mock('../../src/services/webhook.service', () => {
+  class WebhookService {
+    queueEvent = queueEventMock
+  }
+
+  return { WebhookService }
+})
+
 // Mock RewardService methods using vi.spyOn
 describe('RewardController', () => {
   let controller: RewardController
@@ -64,7 +76,7 @@ describe('RewardController', () => {
         updatedAt: new Date(),
       }
 
-      getBalanceSpy.mockReturnValue(mockBalance)
+      getBalanceSpy.mockResolvedValue(mockBalance)
       const nextFn = createNextFunction()
 
       await controller.getBalance(
@@ -120,7 +132,7 @@ describe('RewardController', () => {
         hasMore: false,
       }
 
-      getTransactionHistorySpy.mockReturnValue(mockHistory)
+      getTransactionHistorySpy.mockResolvedValue(mockHistory)
       const nextFn = createNextFunction()
 
       await controller.getHistory(
@@ -144,7 +156,7 @@ describe('RewardController', () => {
     it('should apply type filter when provided', async () => {
       mockRequest.query = { type: 'withdrawal' }
       const mockHistory = { transactions: [], total: 0, hasMore: false }
-      getTransactionHistorySpy.mockReturnValue(mockHistory)
+      getTransactionHistorySpy.mockResolvedValue(mockHistory)
       const nextFn = createNextFunction()
 
       await controller.getHistory(
@@ -162,7 +174,7 @@ describe('RewardController', () => {
     it('should apply status filter when provided', async () => {
       mockRequest.query = { status: 'pending' }
       const mockHistory = { transactions: [], total: 0, hasMore: false }
-      getTransactionHistorySpy.mockReturnValue(mockHistory)
+      getTransactionHistorySpy.mockResolvedValue(mockHistory)
       const nextFn = createNextFunction()
 
       await controller.getHistory(
@@ -182,7 +194,7 @@ describe('RewardController', () => {
       const toDate = '2024-12-31T23:59:59.999Z'
       mockRequest.query = { fromDate, toDate }
       const mockHistory = { transactions: [], total: 0, hasMore: false }
-      getTransactionHistorySpy.mockReturnValue(mockHistory)
+      getTransactionHistorySpy.mockResolvedValue(mockHistory)
       const nextFn = createNextFunction()
 
       await controller.getHistory(
@@ -203,7 +215,7 @@ describe('RewardController', () => {
     it('should apply pagination when provided', async () => {
       mockRequest.query = { limit: '10', offset: '20' }
       const mockHistory = { transactions: [], total: 50, hasMore: true }
-      getTransactionHistorySpy.mockReturnValue(mockHistory)
+      getTransactionHistorySpy.mockResolvedValue(mockHistory)
       const nextFn = createNextFunction()
 
       await controller.getHistory(
@@ -307,7 +319,7 @@ describe('RewardController', () => {
       }
 
       mockRequest.body = withdrawalData
-      hasSufficientBalanceSpy.mockReturnValue(true)
+      hasSufficientBalanceSpy.mockResolvedValue(true)
       processWithdrawalSpy.mockResolvedValue({
         transactionId: 'txn-withdrawal-123',
         userId: 'user-123',
@@ -320,6 +332,8 @@ describe('RewardController', () => {
       const nextFn = createNextFunction()
 
       await controller.withdraw(mockRequest as any, mockResponse as any, nextFn)
+      // Flush the asyncHandler's floating promise so the .catch / resolution fires
+      await new Promise((resolve) => setTimeout(resolve, 10))
 
       expect(hasSufficientBalanceSpy).toHaveBeenCalledWith('user-123', 50)
       expect(processWithdrawalSpy).toHaveBeenCalledWith(
@@ -335,6 +349,15 @@ describe('RewardController', () => {
         expect.objectContaining({
           success: true,
           message: 'Withdrawal processed successfully',
+        }),
+      )
+      expect(queueEventMock).toHaveBeenCalledWith(
+        'reward.issued',
+        expect.objectContaining({
+          userId: 'user-123',
+          transactionId: 'txn-withdrawal-123',
+          amount: 50,
+          stellarTxHash: 'stellar-hash-xyz',
         }),
       )
     })
@@ -424,8 +447,8 @@ describe('RewardController', () => {
         amount: 1000,
       }
 
-      hasSufficientBalanceSpy.mockReturnValue(false)
-      getBalanceSpy.mockReturnValue({
+      hasSufficientBalanceSpy.mockResolvedValue(false)
+      getBalanceSpy.mockResolvedValue({
         available: 50,
         pending: 0,
         lifetime: 100,
@@ -433,6 +456,8 @@ describe('RewardController', () => {
       const nextFn = createNextFunction()
 
       await controller.withdraw(mockRequest as any, mockResponse as any, nextFn)
+      // Flush the asyncHandler's floating promise so the .catch fires
+      await new Promise((resolve) => setTimeout(resolve, 10))
 
       expect(nextFn).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -447,7 +472,7 @@ describe('RewardController', () => {
         amount: 50,
       }
 
-      hasSufficientBalanceSpy.mockReturnValue(true)
+      hasSufficientBalanceSpy.mockResolvedValue(true)
       processWithdrawalSpy.mockRejectedValue(new Error('Stellar network error'))
       const nextFn = createNextFunction()
 
@@ -459,6 +484,7 @@ describe('RewardController', () => {
       expect(nextFn).toHaveBeenCalledWith(
         expect.objectContaining({ message: 'Stellar network error' }),
       )
+      expect(queueEventMock).not.toHaveBeenCalled()
     })
   })
 

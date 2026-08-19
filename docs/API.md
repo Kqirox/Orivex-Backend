@@ -57,19 +57,13 @@ GET /v1/users/me
 
 ```json
 {
-  "status": "success",
-  "data": {
-    "id": "usr_123",
-    "email": "user@example.com",
-    "name": "John Doe",
-    "walletAddress": "GABC...123",
-    "createdAt": "2024-01-01T00:00:00Z",
-    "stats": {
-      "modulesCompleted": 15,
-      "totalEarned": "25.50",
-      "currentStreak": 7
-    }
-  }
+  "id": "usr_123",
+  "email": "user@example.com",
+  "username": "john_doe",
+  "role": "LEARNER",
+  "walletAddress": "GABC...123",
+  "createdAt": "2024-01-01T00:00:00Z",
+  "updatedAt": "2024-01-02T00:00:00Z"
 }
 ```
 
@@ -83,11 +77,36 @@ PATCH /v1/users/me
 
 ```json
 {
-  "name": "John Updated",
-  "preferences": {
-    "language": "fr",
-    "notifications": true
-  }
+  "username": "john_updated"
+}
+```
+
+#### Change Password
+
+```txt
+PATCH /v1/users/password
+```
+
+**Request:**
+
+```json
+{
+  "currentPassword": "OldPassword123!",
+  "newPassword": "NewPassword123!"
+}
+```
+
+#### Update Wallet Address
+
+```txt
+PATCH /v1/users/wallet
+```
+
+**Request:**
+
+```json
+{
+  "walletAddress": "GABC...123"
 }
 ```
 
@@ -463,9 +482,10 @@ X-RateLimit-Reset: 1627583492
 
 You can register webhooks to receive real-time events:
 
-- `user.completed_module`
+- `user.registered`
+- `module.completed`
 - `reward.issued`
-- `credential.verified`
+- `employer.contact_attempt`
 
 See [Webhook Documentation](./WEBHOOKS.md) for details.
 
