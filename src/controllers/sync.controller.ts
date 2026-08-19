@@ -2,6 +2,7 @@ import { Request, Response } from 'express'
 import prisma from '../config/database'
 import { asyncHandler } from '../middleware/error.middleware'
 import { BadRequestError, UnauthorizedError } from '../utils/errors'
+import { ReferralController } from './referral.controller'
 
 interface ProgressEvent {
   idempotencyKey: string
@@ -226,6 +227,14 @@ export class SyncController {
         await prisma.completion.create({
           data: { userId, moduleId, score },
         })
+
+        // A first completion arriving via offline sync must also unlock the
+        // referrer's bonus. The call is idempotent, so later completions are no-ops.
+        try {
+          await ReferralController.processReferralBonus(userId)
+        } catch (error) {
+          console.error('Error processing referral bonus:', error)
+        }
       }
 
       await prisma.syncEvent.create({

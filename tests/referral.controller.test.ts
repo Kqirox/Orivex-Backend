@@ -13,7 +13,7 @@ vi.mock('../src/config/database', () => ({
       findFirst: vi.fn(),
       findMany: vi.fn(),
       create: vi.fn(),
-      update: vi.fn(),
+      updateMany: vi.fn(),
     },
     completion: {
       count: vi.fn(),
@@ -196,15 +196,27 @@ describe('ReferralController', () => {
         id: 'ref-1', referrerId: 'user-2', bonusPaid: false,
       } as any)
       vi.mocked(prisma.completion.count).mockResolvedValue(1)
-      vi.mocked(prisma.referral.update).mockResolvedValue({} as any)
+      vi.mocked(prisma.referral.updateMany).mockResolvedValue({ count: 1 })
       vi.mocked(prisma.transaction.create).mockResolvedValue({} as any)
 
       await ReferralController.processReferralBonus('user-1')
 
-      expect(prisma.referral.update).toHaveBeenCalledWith(
-        expect.objectContaining({ data: expect.objectContaining({ bonusPaid: true }) }),
+      expect(prisma.referral.updateMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({ id: 'ref-1', bonusPaid: false }),
+          data: expect.objectContaining({ bonusPaid: true, bonusAmount: 5.0 }),
+        }),
       )
-      expect(prisma.transaction.create).toHaveBeenCalled()
+      expect(prisma.transaction.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            userId: 'user-2',
+            amount: 5.0,
+            type: 'referral_reward',
+            status: 'completed',
+          }),
+        }),
+      )
     })
 
     it('skips bonus if already paid', async () => {
@@ -214,7 +226,8 @@ describe('ReferralController', () => {
 
       await ReferralController.processReferralBonus('user-1')
 
-      expect(prisma.referral.update).not.toHaveBeenCalled()
+      expect(prisma.referral.updateMany).not.toHaveBeenCalled()
+      expect(prisma.transaction.create).not.toHaveBeenCalled()
     })
 
     it('skips bonus if no completions yet', async () => {
@@ -225,7 +238,24 @@ describe('ReferralController', () => {
 
       await ReferralController.processReferralBonus('user-1')
 
-      expect(prisma.referral.update).not.toHaveBeenCalled()
+      expect(prisma.referral.updateMany).not.toHaveBeenCalled()
+      expect(prisma.transaction.create).not.toHaveBeenCalled()
+    })
+
+    it('does not double-pay when a concurrent request already credited the bonus', async () => {
+      vi.mocked(prisma.referral.findUnique).mockResolvedValue({
+        id: 'ref-1', referrerId: 'user-2', bonusPaid: false,
+      } as any)
+      vi.mocked(prisma.completion.count).mockResolvedValue(1)
+      // The conditional update affects zero rows because the bonus was already marked paid.
+      vi.mocked(prisma.referral.updateMany).mockResolvedValue({ count: 0 })
+
+      await ReferralController.processReferralBonus('user-1')
+
+      expect(prisma.referral.updateMany).toHaveBeenCalledWith(
+        expect.objectContaining({ where: expect.objectContaining({ id: 'ref-1', bonusPaid: false }) }),
+      )
+      expect(prisma.transaction.create).not.toHaveBeenCalled()
     })
   })
 })

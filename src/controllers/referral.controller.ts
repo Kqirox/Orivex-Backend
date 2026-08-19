@@ -56,6 +56,7 @@ export class ReferralController {
    * /referrals/apply:
    *   post:
    *     summary: Apply a referral code during signup or onboarding
+   *     description: The referrer's bonus is credited automatically once the referred user completes their first module.
    *     tags: [Referrals]
    *     security:
    *       - bearerAuth: []
@@ -168,6 +169,11 @@ export class ReferralController {
 
   /**
    * Called internally when a referree completes their first module to unlock the referrer bonus.
+   *
+   * The bonusPaid transition is performed with a conditional updateMany so that two
+   * concurrent first-completion requests cannot both credit the bonus: only one call
+   * can flip bonusPaid from false to true, and the loser observes a zero count and
+   * returns without writing a reward transaction.
    */
   static async processReferralBonus(referreeId: string): Promise<void> {
     const referral = await prisma.referral.findUnique({
@@ -179,14 +185,17 @@ export class ReferralController {
     const completionCount = await prisma.completion.count({ where: { userId: referreeId } })
     if (completionCount < 1) return
 
-    await prisma.referral.update({
-      where: { id: referral.id },
+    const result = await prisma.referral.updateMany({
+      where: { id: referral.id, bonusPaid: false },
       data: {
         bonusPaid: true,
         bonusAmount: REFERRAL_BONUS_AMOUNT,
         bonusPaidAt: new Date(),
       },
     })
+
+    // Another request already credited this bonus — do not double-pay.
+    if (result.count === 0) return
 
     await prisma.transaction.create({
       data: {

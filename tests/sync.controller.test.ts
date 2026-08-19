@@ -13,9 +13,17 @@ vi.mock('../src/config/database', () => ({
       findUnique: vi.fn(),
       create: vi.fn(),
       update: vi.fn(),
+      count: vi.fn(),
     },
     module: {
       findUnique: vi.fn(),
+    },
+    referral: {
+      findUnique: vi.fn(),
+      updateMany: vi.fn(),
+    },
+    transaction: {
+      create: vi.fn(),
     },
   },
 }))
@@ -243,6 +251,35 @@ describe('SyncController', () => {
       expect(prisma.completion.create).toHaveBeenCalled()
       const call = vi.mocked(res.json).mock.calls[0][0]
       expect(call.data.results[0].status).toBe('applied')
+    })
+
+    it('credits the referrer bonus when a first completion is synced offline', async () => {
+      req.body = { events: [makeCompletionEvent()] }
+      vi.mocked(prisma.syncEvent.findUnique).mockResolvedValue(null)
+      vi.mocked(prisma.module.findUnique).mockResolvedValue({ id: 'module-1' } as any)
+      vi.mocked(prisma.completion.findUnique).mockResolvedValue(null)
+      vi.mocked(prisma.completion.create).mockResolvedValue({} as any)
+      vi.mocked(prisma.syncEvent.create).mockResolvedValue({} as any)
+      vi.mocked(prisma.referral.findUnique).mockResolvedValue({
+        id: 'ref-1', referrerId: 'user-2', bonusPaid: false,
+      } as any)
+      vi.mocked(prisma.completion.count).mockResolvedValue(1)
+      vi.mocked(prisma.referral.updateMany).mockResolvedValue({ count: 1 })
+      vi.mocked(prisma.transaction.create).mockResolvedValue({} as any)
+
+      controller.syncCompletions(req as Request, res as Response, next)
+      await flushPromises()
+
+      expect(prisma.referral.updateMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({ id: 'ref-1', bonusPaid: false }),
+        }),
+      )
+      expect(prisma.transaction.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({ type: 'referral_reward' }),
+        }),
+      )
     })
 
     it('rejects event with invalid score', async () => {
