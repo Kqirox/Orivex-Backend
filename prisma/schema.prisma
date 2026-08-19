@@ -41,6 +41,22 @@ model Module {
   updatedAt       DateTime       @updatedAt
   completions     Completion[]
   credentials     Credential[]
+  questions       QuizQuestion[]
+}
+
+/// Server-side answer key for a module's quiz.
+/// The correct option ID is stored only on the server; clients never see answerKey.
+model QuizQuestion {
+  id        String   @id @default(uuid())
+  moduleId  String
+  module    Module   @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+  prompt    String
+  options   String   // JSON array of {id: string, text: string}
+  answerKey String   // the id value of the correct option
+  position  Int      @default(0) // display order within the module
+
+  @@index([moduleId])
+  @@map("quiz_questions")
 }
 
 model Completion {

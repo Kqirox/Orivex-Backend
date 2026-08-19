@@ -404,11 +404,36 @@ export const completeModule = async (req: Request, res: Response) => {
       return res.status(400).json({ message: 'Module already completed' })
     }
 
-    // Calculate score (simplified - in real implementation, this would validate against actual quiz questions)
-    // For now, we'll simulate a scoring mechanism
-    const correctAnswers = quizAnswers.length // Simplified: assume all answers are correct
-    const totalQuestions = quizAnswers.length || 1 // Avoid division by zero
-    const score = Math.round((correctAnswers / totalQuestions) * 100)
+    // Load the module's quiz questions (server-side answer keys)
+    const questions = await prisma.quizQuestion.findMany({
+      where: { moduleId: id },
+      orderBy: { position: 'asc' },
+    })
+
+    // A module with no configured questions cannot grant a reward
+    if (questions.length === 0) {
+      return res.status(400).json({
+        message: 'This module has no quiz questions configured. Contact support.',
+      })
+    }
+
+    // Reject empty answer submissions
+    if (quizAnswers.length === 0) {
+      return res.status(400).json({ message: 'Quiz answers must not be empty' })
+    }
+
+    // Grade against server-side answer keys
+    const answerMap = new Map(quizAnswers.map((a) => [a.questionId, a.answer]))
+    let correctCount = 0
+
+    for (const question of questions) {
+      const submitted = answerMap.get(question.id)
+      if (submitted === question.answerKey) {
+        correctCount++
+      }
+    }
+
+    const score = Math.round((correctCount / questions.length) * 100)
 
     // Update completion record
     const updatedCompletion = await prisma.completion.update({
