@@ -121,7 +121,7 @@ describe('EmployerController', () => {
     ;(prisma.user.findMany as any).mockResolvedValue([candidateFixture])
 
     const req = {
-      user: { id: 'emp-1', role: 'employer' },
+      user: { id: 'emp-1', role: 'EMPLOYER' },
       query: { limit: '100' },
     } as unknown as Request
     const res = createResponse()
@@ -141,7 +141,7 @@ describe('EmployerController', () => {
     ;(prisma.user.findMany as any).mockResolvedValue([candidateFixture])
 
     const req = {
-      user: { id: 'emp-1', role: 'employer' },
+      user: { id: 'emp-1', role: 'EMPLOYER' },
       headers: { 'x-employer-plan': 'enterprise' },
       query: { limit: '100' },
     } as unknown as Request
@@ -224,7 +224,7 @@ describe('EmployerController', () => {
     mockEmployerPlan('starter')
 
     const req = {
-      user: { id: 'emp-1', email: 'employer@orivex.dev', role: 'employer' },
+      user: { id: 'emp-1', email: 'employer@orivex.dev', role: 'EMPLOYER' },
       headers: { 'x-employer-plan': 'pro' },
       body: {
         candidateId: 'cand-1',
