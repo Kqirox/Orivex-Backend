@@ -39,10 +39,12 @@ const PLAN_MAX_SEARCH_LIMIT: Record<string, number> = {
   enterprise: 100,
 }
 
-function getEmployerPlan(req: Request) {
-  const fromHeader = req.headers['x-employer-plan']
-  const planValue = Array.isArray(fromHeader) ? fromHeader[0] : fromHeader
-  const normalized = String(planValue ?? 'starter').toLowerCase()
+async function getEmployerPlan(req: Request) {
+  const user = await prisma.user.findUnique({
+    where: { id: req.user?.id },
+    select: { plan: true },
+  })
+  const normalized = String(user?.plan ?? 'starter').toLowerCase()
 
   return PLAN_RANK[normalized] ? normalized : 'starter'
 }
@@ -159,7 +161,7 @@ export const searchTalent = async (req: Request, res: Response) => {
   }
 
   const { page, limit, skills, location, credentials, search } = parsed.data
-  const employerPlan = getEmployerPlan(req)
+  const employerPlan = await getEmployerPlan(req)
   const maxLimit = PLAN_MAX_SEARCH_LIMIT[employerPlan] ?? PLAN_MAX_SEARCH_LIMIT.starter
   if (limit > maxLimit) {
     return res.status(400).json({
@@ -330,7 +332,7 @@ export const contactCandidate = async (req: Request, res: Response) => {
     return res.status(403).json({ message: 'Employer account required' })
   }
 
-  const employerPlan = getEmployerPlan(req)
+  const employerPlan = await getEmployerPlan(req)
   if (PLAN_RANK[employerPlan] < PLAN_RANK.pro) {
     return res.status(402).json({
       message: 'Employer plan upgrade required',
