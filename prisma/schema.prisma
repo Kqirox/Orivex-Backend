@@ -12,6 +12,7 @@ model User {
   username        String         @unique
   password        String
   role            Role           @default(LEARNER)
+  plan            String         @default("starter") // starter, pro, enterprise
   walletAddress   String?        @unique
   createdAt       DateTime       @default(now())
   updatedAt       DateTime       @updatedAt

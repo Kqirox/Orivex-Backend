@@ -405,7 +405,7 @@ GET /v1/credentials/verify/:onChainId
 GET /v1/employer/search?skills=finance,defi&location=kenya
 ```
 
-**Authentication:** Requires employer API key
+**Authentication:** Requires an authenticated employer JWT. The per-plan page limit (`starter: 10`, `pro: 50`, `enterprise: 100`) is derived from the employer's persisted plan, not from a request header.
 
 **Response:**
 

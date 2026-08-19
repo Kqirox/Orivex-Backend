@@ -16,6 +16,9 @@ vi.mock('../../src/config/database', () => ({
         module: {
             findUnique: vi.fn(),
         },
+        quizQuestion: {
+            findMany: vi.fn(),
+        },
         completion: {
             findUnique: vi.fn(),
             update: vi.fn(),
@@ -65,6 +68,9 @@ describe('ModuleController.completeModule', () => {
         const completedAt = new Date('2026-01-01T00:00:00Z')
         ;(prisma.completion.update as any).mockResolvedValue({ completedAt })
         ;(prisma.transaction.create as any).mockResolvedValue({ id: 'txn-1' })
+        ;(prisma.quizQuestion.findMany as any).mockResolvedValue([
+            { id: 'q1', moduleId: 'mod-1', prompt: 'Q1', options: '[]', answerKey: 'a', position: 0 },
+        ])
 
         const req = {
             user: { id: 'user-1' },
