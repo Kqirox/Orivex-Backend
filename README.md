@@ -55,7 +55,7 @@ Orivex Backend is one of three repos. Together they form the full stack.
 - **📚 Modules & Progress** — Catalogue, completion submission, offline sync, idempotent ingestion.
 - **🎁 Rewards Engine** — Stellar-based payouts with reconcilable memos and dispute handling.
 - **🎓 Verifiable Credentials** — Mint, fetch, and publicly verify credentials by on-chain ID.
-- **🤝 Referrals** — Multi-tier tracking, capped rewards, anti-abuse heuristics.
+- **🤝 Referrals** — Multi-tier tracking, capped rewards, anti-abuse heuristics, with the referrer bonus credited automatically on the referee's first module completion.
 
 ### ⚙️ Operations & Integrations
 

@@ -6,6 +6,7 @@ import { z } from 'zod'
 import { prisma } from '../config/database'
 import { NotificationService } from '../services/notification.service'
 import { WebhookService } from '../services/webhook.service'
+import { ReferralController } from './referral.controller'
 
 const notificationService = new NotificationService()
 const webhookService = new WebhookService()
@@ -465,6 +466,15 @@ export const completeModule = async (req: Request, res: Response) => {
           status: 'pending'
         }
       })
+    }
+
+    // Credit the referrer's bonus on the referee's first completion. This is idempotent
+    // (guarded by the bonusPaid flag and a conditional updateMany) so a second module
+    // completion never double-pays. A failure here must not fail the user's completion.
+    try {
+      await ReferralController.processReferralBonus(req.user.id)
+    } catch (error) {
+      console.error('Error processing referral bonus:', error)
     }
 
     // Fire push notification for quiz pass/fail (non-blocking)
