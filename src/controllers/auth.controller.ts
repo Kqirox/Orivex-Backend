@@ -48,7 +48,7 @@ export class AuthController {
                 return
             }
 
-            const { email, password, username, role } = validation.data
+            const { email, password, username } = validation.data
 
             // Check if user already exists
             const existingUser = await prisma.user.findFirst({
@@ -70,13 +70,13 @@ export class AuthController {
             const salt = await bcrypt.genSalt(10)
             const hashedPassword = await bcrypt.hash(password, salt)
 
-            // Create user
+            // Create user — role is always LEARNER; callers cannot self-assign roles
             const user = await prisma.user.create({
                 data: {
                     email,
                     username,
                     password: hashedPassword,
-                    role: (role as any) || UserRole.LEARNER,
+                    role: UserRole.LEARNER,
                 }
             })
 

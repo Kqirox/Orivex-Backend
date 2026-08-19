@@ -11,7 +11,7 @@ vi.mock('../../src/controllers/employer.controller', () => ({
 
 import employerRoutes from '../../src/routes/v1/employer.routes'
 
-function makeToken(role: 'learner' | 'employer') {
+function makeToken(role: 'LEARNER' | 'EMPLOYER') {
   const secret = process.env.JWT_SECRET as string
 
   return jwt.sign({ id: 'user-1', email: 'user@example.com', role }, secret, {
@@ -41,7 +41,7 @@ describe('employer.routes', () => {
 
     const response = await request(app)
       .get('/employer/search')
-      .set('Authorization', `Bearer ${makeToken('learner')}`)
+      .set('Authorization', `Bearer ${makeToken('LEARNER')}`)
 
     expect(response.status).toBe(403)
   })
@@ -53,7 +53,7 @@ describe('employer.routes', () => {
 
     const response = await request(app)
       .get('/employer/search')
-      .set('Authorization', `Bearer ${makeToken('employer')}`)
+      .set('Authorization', `Bearer ${makeToken('EMPLOYER')}`)
 
     expect(response.status).toBe(200)
     expect(response.headers['x-ratelimit-limit']).toBeDefined()
