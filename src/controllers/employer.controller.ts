@@ -142,7 +142,7 @@ function profileFromCandidate(candidate: CandidateRecord) {
 }
 
 function isEmployer(req: Request) {
-  return req.user?.role === 'employer'
+  return req.user?.role === 'EMPLOYER'
 }
 
 export const searchTalent = async (req: Request, res: Response) => {

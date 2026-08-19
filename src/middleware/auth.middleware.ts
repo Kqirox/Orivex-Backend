@@ -2,7 +2,7 @@ import { NextFunction, Request, Response } from 'express'
 
 import jwt from 'jsonwebtoken'
 
-export type UserRole = 'learner' | 'employer';
+export type UserRole = 'ADMIN' | 'LEARNER' | 'INSTRUCTOR' | 'EMPLOYER';
 
 export interface JwtPayload {
      id: string;

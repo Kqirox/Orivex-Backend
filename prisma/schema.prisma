@@ -86,6 +86,7 @@ enum Role {
   ADMIN
   LEARNER
   INSTRUCTOR
+  EMPLOYER
 }
 
 model ReferralCode {

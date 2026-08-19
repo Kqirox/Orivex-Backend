@@ -1,9 +1,10 @@
 // ── Enums ──────────────────────────────────────────────────
 
 export enum UserRole {
-  ADMIN = 'admin',
-  LEARNER = 'learner',
-  INSTRUCTOR = 'instructor',
+  ADMIN = 'ADMIN',
+  LEARNER = 'LEARNER',
+  INSTRUCTOR = 'INSTRUCTOR',
+  EMPLOYER = 'EMPLOYER',
 }
 
 export enum UserStatus {
