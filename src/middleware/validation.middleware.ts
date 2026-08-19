@@ -116,10 +116,6 @@ export const validate = (schemas: ValidationSchemas) => {
 export const validateProfileUpdate = validate({
   body: z.object({
     username: commonSchemas.username.optional(),
-    firstName: z.string().max(50, 'First name must be less than 50 characters').optional(),
-    lastName: z.string().max(50, 'Last name must be less than 50 characters').optional(),
-    bio: z.string().max(500, 'Bio must be less than 500 characters').optional(),
-    avatar: commonSchemas.url.optional(),
   })
 })
 
