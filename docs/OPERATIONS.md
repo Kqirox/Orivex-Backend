@@ -46,11 +46,24 @@ Required at runtime:
 | Env var                        | Notes                                          |
 |--------------------------------|------------------------------------------------|
 | `DATABASE_URL`                 | Postgres connection string                     |
+| `REDIS_URL`                    | Redis connection string for rate-limit counters (falls back to in-memory when unset) |
+| `TRUST_PROXY`                  | `true` only behind a trusted reverse proxy; enables trusting the rightmost `x-forwarded-for` hop |
 | `JWT_SECRET`                   | HS256 signing key                              |
 | `STELLAR_NETWORK`              | `testnet` or `mainnet`                         |
 | `STELLAR_SOURCE_SECRET`        | used for reward payouts                        |
 | `SOROBAN_CONTRACT_ID`          | for credential mint/verify calls               |
 | `FIREBASE_SERVICE_ACCOUNT_KEY` | JSON-encoded Firebase admin service account    |
+
+## Rate limiting (Redis)
+
+- Rate-limit counters are stored in Redis when `REDIS_URL` is set, so limits
+  are shared across all replicas and survive restarts. Without `REDIS_URL`
+  the service falls back to a per-process in-memory store — fine for local
+  development, but counters are then per-replica and reset on restart.
+- Provision a single Redis instance (or cluster) shared by all replicas.
+- Set `TRUST_PROXY=true` only when the service sits behind a trusted reverse
+  proxy that overwrites `x-forwarded-for`; otherwise the client IP comes from
+  the socket address and client-supplied headers are ignored.
 
 Rotate `JWT_SECRET` and `STELLAR_SOURCE_SECRET` quarterly.
 
