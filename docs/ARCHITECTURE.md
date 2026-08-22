@@ -45,7 +45,7 @@ versioned JSON API under `/api/v1` and is responsible for:
 |---------------------------|---------------------------------------------------------------|
 | Authentication            | `src/middleware/auth.middleware.ts`, JWT verified here        |
 | Validation                | Zod schemas in `src/schemas`, applied by `validation.middleware.ts` |
-| Rate limiting             | `src/middleware/rate-limit.middleware.ts` using Redis-compatible store |
+| Rate limiting             | `src/middleware/rate-limit.middleware.ts` backed by Redis (production) or in-memory Map (development / test) |
 | Error response shape      | `src/utils/errors.ts`, formatted by `error.middleware.ts`     |
 | Logging                   | `src/config/logger.ts` (Winston) + `morgan` request logs      |
 | Webhook delivery          | `src/services/webhook.service.ts` with HMAC `X-Orivex-Signature` |
@@ -58,7 +58,7 @@ versioned JSON API under `/api/v1` and is responsible for:
 Load balancer
    └── Orivex-Backend (stateless; ≥ 2 replicas)
         ├── Postgres primary (HA, automated backups)
-        └── Redis (rate-limit counters, optional cache)
+        └── Redis (rate-limit counters; required for multi-replica deployments)
 ```
 
 Statelessness is enforced: no app state. All mutable state lives in Postgres
