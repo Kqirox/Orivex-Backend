@@ -36,8 +36,32 @@ This document is for operators of the **Orivex-Backend** service.
 ## Logs
 
 - Production logs are emitted via `winston` (`src/config/logger.ts`).
-- Request logs go through `morgan('dev')` in development — disable in
-  production by setting `NODE_ENV=production`.
+- Request access logs go through `morgan` in `src/app.ts` and include the
+  request ID as the first token on each line.
+- Every request is assigned a correlation ID (UUID v4 by default). The ID is
+  stored in AsyncLocalStorage and attached to Winston log lines as
+  `requestId=…` structured metadata.
+
+### Querying logs by request ID
+
+1. Capture the `X-Request-Id` header from the HTTP response (or from the
+   `error.requestId` field on error envelopes). Browser JavaScript can read
+   the header because CORS exposes it via `Access-Control-Expose-Headers`.
+2. Filter application logs for that value, for example:
+
+```bash
+# Example: stream container logs and filter by ID
+grep 'requestId=550e8400-e29b-41d4-a716-446655440000' /var/log/orivex/*.log
+
+# Example: kubectl / cloud log query (adjust for your provider)
+kubectl logs -l app=orivex-backend --since=1h | grep '550e8400-e29b-41d4-a716-446655440000'
+```
+
+Morgan access lines also start with the same ID, so a single grep covers
+access logs, Winston service logs, and error-handler output for that request.
+
+Valid client-supplied `X-Request-Id` values (≤ 128 chars, `[A-Za-z0-9_.:-]`)
+are honored; oversized or malformed values are overwritten with a new UUID.
 
 ## Secrets management
 

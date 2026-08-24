@@ -1,4 +1,5 @@
 import configLogger from '../config/logger'
+import { getRequestId } from '../config/request-context'
 
 export type LogLevel =
   | 'error'
@@ -7,8 +8,14 @@ export type LogLevel =
   | 'http'
   | 'verbose'
   | 'debug'
-  | 'silly';
+  | 'silly'
 
+/**
+ * Thin wrapper around the Winston logger in `src/config/logger.ts`.
+ * Request IDs are injected automatically via AsyncLocalStorage — callers do
+ * not need to pass them. Prefer `getRequestId()` when the ID is needed for
+ * responses or external systems.
+ */
 const logger = {
   error: (message: string, meta?: any) => configLogger.error(message, meta),
   warn: (message: string, meta?: any) => configLogger.warn(message, meta),
@@ -20,6 +27,7 @@ const logger = {
   setLevel: (level: LogLevel) => {
     configLogger.level = level
   },
+  getRequestId,
 }
 
 export default logger

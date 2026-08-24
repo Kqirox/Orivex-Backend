@@ -43,6 +43,7 @@ export interface ApiError {
   error: {
     code: string;
     message: string;
+    requestId?: string;
     details?: Record<string, string[]>;
   };
   timestamp: string;

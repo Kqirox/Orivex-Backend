@@ -155,7 +155,8 @@ app.use(errorHandler)
   "success": false,
   "error": {
     "message": "User not found",
-    "code": 404
+    "code": 404,
+    "requestId": "550e8400-e29b-41d4-a716-446655440000"
   }
 }
 ```
@@ -168,6 +169,7 @@ app.use(errorHandler)
   "error": {
     "message": "User not found",
     "code": 404,
+    "requestId": "550e8400-e29b-41d4-a716-446655440000",
     "stack": [
       "NotFoundError: User not found",
       "at Array.getUserById [as handler] (/path/to/controller.ts:25:11)",
