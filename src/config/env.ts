@@ -6,6 +6,12 @@ export const env = {
   NODE_ENV: process.env.NODE_ENV || 'development',
   PORT: parseInt(process.env.PORT || '3000', 10),
 
+  // Shared backend for rate-limit counters (optional; falls back to in-memory).
+  REDIS_URL: process.env.REDIS_URL || '',
+  // When true, the rightmost entry of x-forwarded-for is trusted as the
+  // client address; set only behind a trusted reverse proxy.
+  TRUST_PROXY: process.env.TRUST_PROXY === 'true',
+
   // Rate limiting configurations
   RATE_LIMIT_GENERAL_WINDOW_MS: parseInt(process.env.RATE_LIMIT_GENERAL_WINDOW_MS || '900000', 10), // 15 minutes
   RATE_LIMIT_GENERAL_MAX: parseInt(process.env.RATE_LIMIT_GENERAL_MAX || '100', 10),
