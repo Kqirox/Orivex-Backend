@@ -20,6 +20,9 @@ const prismaMock = vi.hoisted(() => ({
     transaction: {
         create: vi.fn(),
     },
+    rewardClaim: {
+        create: vi.fn(),
+    },
     referral: {
         findUnique: vi.fn(),
         updateMany: vi.fn(),
@@ -229,5 +232,117 @@ describe('ModuleController.completeModule', () => {
         expect(res.json).toHaveBeenCalledWith(
             expect.objectContaining({ message: 'Module completed successfully' }),
         )
+    })
+
+    it('credits the learner with a completed module_reward tied to the module', async () => {
+        vi.mocked(prisma.module.findUnique).mockResolvedValue({
+            id: 'mod-1',
+            title: 'Stellar Fundamentals',
+            reward: 10,
+        } as any)
+        vi.mocked(prisma.completion.findUnique).mockResolvedValue({
+            userId: 'user-1',
+            moduleId: 'mod-1',
+            score: -1,
+        } as any)
+        vi.mocked(prisma.quizQuestion.findMany).mockResolvedValue([
+            { id: 'q1', answerKey: 'a' },
+        ] as any)
+        vi.mocked(prisma.completion.update).mockResolvedValue({} as any)
+        vi.mocked(prisma.rewardClaim.create).mockResolvedValue({ id: 'claim-1' } as any)
+        vi.mocked(prisma.transaction.create).mockResolvedValue({ id: 'txn-1' } as any)
+        vi.mocked(prisma.referral.findUnique).mockResolvedValue(null)
+
+        const req = makeRequest('user-1', 'mod-1')
+        const res = createResponse()
+
+        await completeModule(req, res)
+
+        // Atomic claim row first — the unique (userId, moduleId) constraint is
+        // what makes the credit idempotent across replicas.
+        expect(prisma.rewardClaim.create).toHaveBeenCalledWith({
+            data: { userId: 'user-1', moduleId: 'mod-1' },
+        })
+        expect(prisma.transaction.create).toHaveBeenCalledWith({
+            data: expect.objectContaining({
+                userId: 'user-1',
+                moduleId: 'mod-1',
+                amount: 10,
+                type: 'module_reward',
+                status: 'completed',
+                completedAt: expect.any(Date),
+            }),
+        })
+        expect(res.json).toHaveBeenCalledWith(
+            expect.objectContaining({
+                message: 'Module completed successfully',
+                rewardTransaction: 'txn-1',
+            }),
+        )
+    })
+
+    it('does not create a second reward row when the claim already exists (P2002)', async () => {
+        vi.mocked(prisma.module.findUnique).mockResolvedValue({
+            id: 'mod-1',
+            title: 'Stellar Fundamentals',
+            reward: 10,
+        } as any)
+        vi.mocked(prisma.completion.findUnique).mockResolvedValue({
+            userId: 'user-1',
+            moduleId: 'mod-1',
+            score: -1,
+        } as any)
+        vi.mocked(prisma.quizQuestion.findMany).mockResolvedValue([
+            { id: 'q1', answerKey: 'a' },
+        ] as any)
+        vi.mocked(prisma.completion.update).mockResolvedValue({} as any)
+        const uniqueViolation = Object.assign(
+            new Error('Unique constraint failed on reward_claims'),
+            { code: 'P2002' },
+        )
+        vi.mocked(prisma.rewardClaim.create).mockRejectedValue(uniqueViolation)
+        vi.mocked(prisma.referral.findUnique).mockResolvedValue(null)
+
+        const req = makeRequest('user-1', 'mod-1')
+        const res = createResponse()
+
+        await completeModule(req, res)
+
+        expect(prisma.transaction.create).not.toHaveBeenCalledWith(
+            expect.objectContaining({
+                data: expect.objectContaining({ type: 'module_reward' }),
+            }),
+        )
+        expect(res.json).toHaveBeenCalledWith(
+            expect.objectContaining({
+                message: 'Module completed successfully',
+                rewardTransaction: undefined,
+            }),
+        )
+    })
+
+    it('does not credit any reward on a repeated completion of the same module', async () => {
+        vi.mocked(prisma.module.findUnique).mockResolvedValue({
+            id: 'mod-1',
+            title: 'Stellar Fundamentals',
+            reward: 10,
+        } as any)
+        vi.mocked(prisma.completion.findUnique).mockResolvedValue({
+            userId: 'user-1',
+            moduleId: 'mod-1',
+            score: 80,
+        } as any)
+
+        const req = makeRequest('user-1', 'mod-1')
+        const res = createResponse()
+
+        await completeModule(req, res)
+
+        expect(res.status).toHaveBeenCalledWith(400)
+        expect(res.json).toHaveBeenCalledWith(
+            expect.objectContaining({ message: 'Module already completed' }),
+        )
+        expect(prisma.rewardClaim.create).not.toHaveBeenCalled()
+        expect(prisma.transaction.create).not.toHaveBeenCalled()
     })
 })

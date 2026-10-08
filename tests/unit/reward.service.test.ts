@@ -395,6 +395,41 @@ describe('RewardService', () => {
       expect(balance.pending).toBe(5)
       expect(balance.available).toBeCloseTo(15)
     })
+
+    it('counts a completed module_reward row with its moduleId among earned income', async () => {
+      const { prisma } = await import('../../src/config/database')
+      ;(prisma.transaction.findMany as ReturnType<typeof vi.fn>).mockResolvedValueOnce([
+        {
+          id: 't1', userId: 'user-abc', amount: 5, type: 'module_reward',
+          status: 'completed', createdAt: new Date(), updatedAt: new Date(),
+          stellarTxHash: null, completedAt: new Date(), moduleId: 'mod-001',
+        },
+      ])
+
+      const balance = await service.getBalance('user-abc')
+      expect(balance.available).toBeCloseTo(5)
+      expect(balance.lifetime).toBeCloseTo(5)
+    })
+
+    it('does not count unsettled rows or unrecognized legacy reward types', async () => {
+      const { prisma } = await import('../../src/config/database')
+      ;(prisma.transaction.findMany as ReturnType<typeof vi.fn>).mockResolvedValueOnce([
+        {
+          id: 't1', userId: 'user-abc', amount: 5, type: 'reward',
+          status: 'pending', createdAt: new Date(), updatedAt: new Date(),
+          stellarTxHash: null, completedAt: null, moduleId: null,
+        },
+        {
+          id: 't2', userId: 'user-abc', amount: 7, type: 'module_reward',
+          status: 'pending', createdAt: new Date(), updatedAt: new Date(),
+          stellarTxHash: null, completedAt: null, moduleId: 'mod-001',
+        },
+      ])
+
+      const balance = await service.getBalance('user-abc')
+      expect(balance.available).toBe(0)
+      expect(balance.lifetime).toBe(0)
+    })
   })
 
   // ── getTransactionHistory ───────────────────────────────────────────────────

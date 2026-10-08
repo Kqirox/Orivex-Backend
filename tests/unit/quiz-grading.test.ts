@@ -25,6 +25,7 @@ vi.mock('../../src/config/database', () => {
     },
     quizQuestion: { findMany: vi.fn() },
     transaction: { create: vi.fn() },
+    rewardClaim: { create: vi.fn() },
   }
 
   return { prisma: mock, default: mock }
@@ -111,11 +112,18 @@ describe('completeModule – real quiz grading', () => {
     ;(prisma.transaction.create as ReturnType<typeof vi.fn>).mockResolvedValue({
       id: 'txn-1',
       userId: USER_ID,
+      moduleId: MODULE_ID,
       amount: 5,
-      type: 'reward',
-      status: 'pending',
+      type: 'module_reward',
+      status: 'completed',
       createdAt: new Date(),
       updatedAt: new Date(),
+    })
+    ;(prisma.rewardClaim.create as ReturnType<typeof vi.fn>).mockResolvedValue({
+      id: 'claim-1',
+      userId: USER_ID,
+      moduleId: MODULE_ID,
+      createdAt: new Date(),
     })
     ;(prisma.quizQuestion.findMany as ReturnType<typeof vi.fn>).mockResolvedValue(MOCK_QUESTIONS)
   })
