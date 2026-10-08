@@ -154,7 +154,9 @@ export const authenticatedLimiter = createRateLimiter(
 
 export function dynamicRateLimiter(req: Request, res: Response, next: NextFunction) {
   const user = (req as any).user
-  if (user && user.role === 'employer') {
+  // JWT payloads carry the Prisma Role enum (uppercase, e.g. 'EMPLOYER'), but
+  // normalize the comparison so legacy lowercase role values still match.
+  if (user && String(user.role).toUpperCase() === 'EMPLOYER') {
     return employerLimiter(req, res, next)
   }
   if (user) {

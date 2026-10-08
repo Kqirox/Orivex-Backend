@@ -1,7 +1,7 @@
 import { Request, Response } from 'express'
 import { RewardService } from '../services/reward.service'
 import { asyncHandler } from '../middleware/error.middleware'
-import { BadRequestError } from '../utils/errors'
+import { BadRequestError, UnauthorizedError } from '../utils/errors'
 import { WebhookService } from '../services/webhook.service'
 
 export class RewardController {
@@ -305,13 +305,5 @@ export class RewardController {
    */
   private isValidStellarAddress(address: string): boolean {
     return /^G[A-Z0-9]{50,55}$/.test(address)
-  }
-}
-
-// Custom error for unauthorized access
-class UnauthorizedError extends Error {
-  constructor(message: string) {
-    super(message)
-    this.name = 'UnauthorizedError'
   }
 }
