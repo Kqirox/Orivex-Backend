@@ -457,15 +457,37 @@ export const completeModule = async (req: Request, res: Response) => {
     let rewardTransaction = null
 
     if (isEligibleForReward) {
-      // Create reward transaction
-      rewardTransaction = await prisma.transaction.create({
-        data: {
-          userId: req.user.id,
-          amount: module.reward,
-          type: 'reward',
-          status: 'pending'
+      // RewardClaim's unique (userId, moduleId) constraint is the database-level
+      // guard against crediting twice when concurrent requests race past the
+      // score check above. P2002 means this module was already credited.
+      let alreadyCredited = false
+
+      try {
+        await prisma.rewardClaim.create({
+          data: { userId: req.user.id, moduleId: id }
+        })
+      } catch (error: any) {
+        if (error?.code === 'P2002') {
+          alreadyCredited = true
+        } else {
+          throw error
         }
-      })
+      }
+
+      if (!alreadyCredited) {
+        // Credit the learner immediately: a recognized type plus 'completed'
+        // status is what RewardService.getBalance counts as earned income.
+        rewardTransaction = await prisma.transaction.create({
+          data: {
+            userId: req.user.id,
+            moduleId: id,
+            amount: module.reward,
+            type: 'module_reward',
+            status: 'completed',
+            completedAt: new Date()
+          }
+        })
+      }
     }
 
     // Credit the referrer's bonus on the referee's first completion. This is idempotent
