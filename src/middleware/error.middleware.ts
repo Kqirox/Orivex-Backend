@@ -3,6 +3,11 @@ import { NextFunction, Request, Response } from 'express'
 
 import { env } from '../config/env'
 import logger from '../config/logger'
+import { getRequestId } from '../config/request-context'
+
+function requestIdFrom(req: Request): string | undefined {
+  return req.requestId ?? getRequestId()
+}
 
 /**
  * Global error handler middleware
@@ -13,14 +18,21 @@ export const errorHandler = (
   err: Error | AppError,
   req: Request,
   res: Response,
+  _next: NextFunction,
 ): void => {
   let error = err
+  const requestId = requestIdFrom(req)
+
+  if (requestId) {
+    res.setHeader('X-Request-Id', requestId)
+  }
 
   logger.error({
     message: err.message,
     stack: err.stack,
     path: req.path,
     method: req.method,
+    requestId,
     timestamp: new Date().toISOString(),
   })
 
@@ -33,7 +45,21 @@ export const errorHandler = (
   const statusCode = (error as AppError).statusCode || 500
   const isDevelopment = env.NODE_ENV === 'development'
 
-  const errorResponse: any = {
+  const errorResponse: {
+    success: false
+    error: {
+      message: string
+      code: number | string
+      requestId?: string
+      stack?: string[]
+      details?: unknown
+      request?: {
+        method: string
+        path: string
+        headers: Request['headers']
+      }
+    }
+  } = {
     success: false,
     error: {
       message: (error as AppError).message,
@@ -41,12 +67,16 @@ export const errorHandler = (
     },
   }
 
+  if (requestId) {
+    errorResponse.error.requestId = requestId
+  }
+
   if (isDevelopment && err.stack) {
     errorResponse.error.stack = err.stack.split('\n')
   }
 
-  if ('errors' in error && (error as any).errors) {
-    errorResponse.error.details = (error as any).errors
+  if ('errors' in error && (error as AppError & { errors?: unknown }).errors) {
+    errorResponse.error.details = (error as AppError & { errors?: unknown }).errors
   }
 
   if (isDevelopment) {
@@ -70,11 +100,13 @@ export const notFoundHandler = (
   next: NextFunction
 ): void => {
   const notFound = new NotFoundError(`Cannot ${req.method} ${req.path}`)
+  const requestId = requestIdFrom(req)
 
   logger.warn({
     message: 'Not Found',
     path: req.path,
     method: req.method,
+    requestId,
     timestamp: new Date().toISOString(),
   })
 
@@ -96,6 +128,7 @@ export const asyncHandler = (
         stack: error.stack,
         path: req.path,
         method: req.method,
+        requestId: requestIdFrom(req),
         timestamp: new Date().toISOString(),
       })
 

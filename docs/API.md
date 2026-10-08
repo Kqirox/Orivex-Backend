@@ -6,6 +6,28 @@ The Orivex API provides endpoints for user management, learning modules, rewards
 
 **Base URL:** `https://api.orivex.io/v1` (production) or `http://localhost:3001/v1` (development)
 
+## Request correlation (`X-Request-Id`)
+
+Every response includes an `X-Request-Id` header so clients and operators can
+correlate a single HTTP call with server logs.
+
+```txt
+X-Request-Id: 550e8400-e29b-41d4-a716-446655440000
+```
+
+Behavior:
+
+- If the client sends a valid `X-Request-Id` (1–128 characters of
+  `[A-Za-z0-9_.:-]`), the server **honors** it and echoes it back.
+- Missing, oversized, or malformed values are **replaced** with a newly
+  generated UUID v4. Invalid headers never cause the request to fail.
+- Error responses also include the same value as `error.requestId` in the JSON
+  envelope (see [Error Handling](#error-handling)).
+
+Browser clients can read the header: CORS exposes `X-Request-Id` via
+`Access-Control-Expose-Headers`. Clients that ignore unknown headers or fields
+remain compatible.
+
 ## Authentication
 
 Most endpoints require authentication using a JWT token.
@@ -453,16 +475,19 @@ Error response format:
 
 ```json
 {
-  "status": "error",
+  "success": false,
   "error": {
-    "code": "RESOURCE_NOT_FOUND",
+    "code": 404,
     "message": "The requested module was not found",
+    "requestId": "550e8400-e29b-41d4-a716-446655440000",
     "details": {
       "moduleId": "mod_invalid"
     }
   }
 }
 ```
+
+The `requestId` matches the `X-Request-Id` response header for the same call.
 
 ## Rate Limiting
 

@@ -53,11 +53,13 @@ describe('Error Handling Middleware', () => {
       path: '/api/test',
       method: 'GET',
       headers: { 'content-type': 'application/json' },
+      requestId: 'test-request-id-001',
     }
 
     mockResponse = {
       status: statusMock as unknown as Response['status'],
       json: jsonMock as unknown as Response['json'],
+      setHeader: vi.fn() as unknown as Response['setHeader'],
     }
 
     mockNext = vi.fn()
@@ -160,6 +162,24 @@ describe('Error Handling Middleware', () => {
       expect(response).toHaveProperty('error')
       expect(response.error).toHaveProperty('message')
       expect(response.error).toHaveProperty('code')
+      expect(response.error).toHaveProperty('requestId', 'test-request-id-001')
+    })
+
+    it('should include requestId in the error envelope and response header', () => {
+      const error = new BadRequestError('Invalid input')
+      errorHandler(
+        error,
+        mockRequest as Request,
+        mockResponse as Response,
+        mockNext as unknown as NextFunction,
+      )
+
+      const response = jsonMock.mock.calls[0][0]
+      expect(response.error.requestId).toBe('test-request-id-001')
+      expect(mockResponse.setHeader).toHaveBeenCalledWith(
+        'X-Request-Id',
+        'test-request-id-001',
+      )
     })
 
     it('should handle regular Error by converting to InternalServerError', () => {
@@ -234,6 +254,7 @@ describe('Error Handling Middleware', () => {
           message: 'Test error',
           path: '/api/test',
           method: 'GET',
+          requestId: 'test-request-id-001',
         })
       )
     })
@@ -287,6 +308,7 @@ describe('Error Handling Middleware', () => {
           message: 'Not Found',
           path: '/api/test',
           method: 'GET',
+          requestId: 'test-request-id-001',
         })
       )
     })
@@ -358,6 +380,7 @@ describe('Error Handling Middleware', () => {
         expect.objectContaining({
           message: 'Async error caught',
           error: 'Database error',
+          requestId: 'test-request-id-001',
         })
       )
     })

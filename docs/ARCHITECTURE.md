@@ -47,7 +47,8 @@ versioned JSON API under `/api/v1` and is responsible for:
 | Validation                | Zod schemas in `src/schemas`, applied by `validation.middleware.ts` |
 | Rate limiting             | `src/middleware/rate-limit.middleware.ts` backed by Redis (production) or in-memory Map (development / test) |
 | Error response shape      | `src/utils/errors.ts`, formatted by `error.middleware.ts`     |
-| Logging                   | `src/config/logger.ts` (Winston) + `morgan` request logs      |
+| Logging                   | `src/config/logger.ts` (Winston) + `morgan` request logs; correlated via `X-Request-Id` / AsyncLocalStorage |
+| Request correlation       | `src/middleware/request-id.middleware.ts` — UUID v4 (or honored inbound ID), echoed as `X-Request-Id` |
 | Webhook delivery          | `src/services/webhook.service.ts` with HMAC `X-Orivex-Signature` |
 | Push notifications        | `src/services/notification.service.ts` via Firebase Admin    |
 | Crypto / Stellar          | `src/services/stellar.service.ts`, `src/services/soroban.service.ts` |
