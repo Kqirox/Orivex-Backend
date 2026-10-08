@@ -1,6 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
+import express from 'express'
+import request from 'supertest'
 import { RewardController } from '../../src/controllers/reward.controller'
 import { RewardService } from '../../src/services/reward.service'
+import { errorHandler } from '../../src/middleware/error.middleware'
+import { AppError } from '../../src/utils/errors'
 import { Request, Response } from 'express'
 
 const { queueEventMock } = vi.hoisted(() => ({
@@ -113,6 +117,34 @@ describe('RewardController', () => {
       // Error should be caught by asyncHandler and passed to next()
       expect(nextFn).toHaveBeenCalled()
       expect(nextFn.mock.calls[0][0]).toBeDefined()
+    })
+
+    it('should throw an AppError carrying statusCode 401 when user is missing', async () => {
+      mockRequest.user = undefined
+      const nextFn = createNextFunction()
+
+      await controller.getBalance(
+        mockRequest as Request,
+        mockResponse as Response,
+        nextFn,
+      )
+
+      const error = nextFn.mock.calls[0][0]
+      expect(error).toBeInstanceOf(AppError)
+      expect(error.statusCode).toBe(401)
+    })
+
+    it('should respond 401 (not 500) through the global error handler', async () => {
+      const app = express()
+      app.get('/rewards/balance', controller.getBalance)
+      app.use(errorHandler)
+
+      const response = await request(app).get('/rewards/balance')
+
+      expect(response.status).toBe(401)
+      expect(response.body.success).toBe(false)
+      expect(response.body.error.code).toBe(401)
+      expect(response.body.error.message).toBe('User ID not found')
     })
   })
 

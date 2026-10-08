@@ -150,7 +150,32 @@ describe('Rate Limiting Middleware', () => {
     it('should use employer limiter for employers', async () => {
       (mockReq as any).user = { role: 'employer' }
       await dynamicRateLimiter(mockReq as Request, mockRes as Response, mockNext)
+
       expect(mockNext).toHaveBeenCalled()
+      expect(mockRes.set).toHaveBeenCalledWith(
+        expect.objectContaining({ 'X-RateLimit-Limit': '500' }),
+      )
+    })
+
+    it('should use employer limiter for the uppercase Prisma EMPLOYER role', async () => {
+      (mockReq as any).user = { role: 'EMPLOYER' }
+      await dynamicRateLimiter(mockReq as Request, mockRes as Response, mockNext)
+
+      expect(mockNext).toHaveBeenCalled()
+      expect(mockRes.set).toHaveBeenCalledWith(
+        expect.objectContaining({ 'X-RateLimit-Limit': '500' }),
+      )
+      expect(mockRes.status).not.toHaveBeenCalled()
+    })
+
+    it('should not use the employer limiter for other roles', async () => {
+      (mockReq as any).user = { role: 'LEARNER' }
+      await dynamicRateLimiter(mockReq as Request, mockRes as Response, mockNext)
+
+      expect(mockNext).toHaveBeenCalled()
+      expect(mockRes.set).toHaveBeenCalledWith(
+        expect.objectContaining({ 'X-RateLimit-Limit': '1000' }),
+      )
     })
   })
 })
